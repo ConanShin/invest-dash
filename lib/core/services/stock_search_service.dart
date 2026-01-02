@@ -101,25 +101,38 @@ class StockSearchService {
 
       print('DEBUG: Stock Search Request -> $url with params: $params');
 
-      final response = await _dio.get(url,
-          queryParameters: params,
-          options: Options(headers: {'User-Agent': 'Mozilla/5.0'}));
+      final response = await _dio.get(
+        url,
+        queryParameters: params,
+        options: Options(
+          headers: {
+            'User-Agent':
+                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          },
+        ),
+      );
 
       print('DEBUG: Stock Search Response Status -> ${response.statusCode}');
 
       final data = response.data;
       if (data != null && data['quotes'] != null) {
         final quotes = (data['quotes'] as List)
-            .where((item) =>
-                item['quoteType'] == 'EQUITY' || item['quoteType'] == 'ETF')
+            .where(
+              (item) =>
+                  item['quoteType'] == 'EQUITY' || item['quoteType'] == 'ETF',
+            )
             .toList();
         print('DEBUG: Stock Search Results Count -> ${quotes.length}');
         return quotes.map((item) => StockSearchResult.fromJson(item)).toList();
       }
       return [];
     } catch (e) {
-      // Fail silently or log
-      print('Search Error: $e');
+      if (e is DioException) {
+        print('Search Error (Dio): ${e.type} - ${e.message}');
+        print('Search Error Response: ${e.response?.data}');
+      } else {
+        print('Search Error: $e');
+      }
       return [];
     }
   }
