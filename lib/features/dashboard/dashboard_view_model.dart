@@ -12,15 +12,20 @@ class DashboardAsset {
   final Holding holding;
   final double currentPrice;
   final double totalValue;
+  final double? dividendAmount;
+  final List<int>? dividendMonths;
 
   DashboardAsset({
     required this.asset,
     required this.holding,
     required this.currentPrice,
+    this.dividendAmount,
+    this.dividendMonths,
   }) : totalValue = asset.type == AssetType.deposit
-           ? holding
-                 .averagePrice // For deposit, avgPrice is the Principal Amount
+           ? holding.averagePrice
            : holding.quantity * currentPrice;
+
+  double get annualDividendValue => (dividendAmount ?? 0) * holding.quantity;
 }
 
 class DashboardState {
@@ -76,15 +81,30 @@ class DashboardViewModel extends _$DashboardViewModel {
     final prices = await stockService.getPrices(symbols);
 
     // 4. Map to DashboardAsset
-    final dashboardAssets = assetsWithHoldings.map((item) {
+    final List<DashboardAsset> dashboardAssets = [];
+    for (final item in assetsWithHoldings) {
       final currentPrice =
           prices[item.asset.symbol] ?? item.holding.averagePrice;
-      return DashboardAsset(
-        asset: item.asset,
-        holding: item.holding,
-        currentPrice: currentPrice,
+
+      List<int>? divMonths;
+      if (item.asset.dividendMonths != null &&
+          item.asset.dividendMonths!.isNotEmpty) {
+        divMonths = item.asset.dividendMonths!
+            .split(',')
+            .map((e) => int.parse(e.trim()))
+            .toList();
+      }
+
+      dashboardAssets.add(
+        DashboardAsset(
+          asset: item.asset,
+          holding: item.holding,
+          currentPrice: currentPrice,
+          dividendAmount: item.asset.dividendAmount,
+          dividendMonths: divMonths,
+        ),
       );
-    }).toList();
+    }
 
     // 5. Calculate Total (in KRW)
     final totalValue = dashboardAssets.fold(0.0, (sum, item) {
@@ -95,7 +115,7 @@ class DashboardViewModel extends _$DashboardViewModel {
       return sum + itemValue;
     });
 
-    // Sort: Owner (Sincheolmin, Chaejiseon, Sinbi) -> Type
+    // Sort: Owner -> Type
     dashboardAssets.sort((a, b) {
       final ownerCompare = a.asset.owner.compareTo(b.asset.owner);
       if (ownerCompare != 0) return ownerCompare;
@@ -111,6 +131,30 @@ class DashboardViewModel extends _$DashboardViewModel {
 
   Future<void> refresh() async {
     state = const AsyncValue.loading();
+    ref.invalidateSelf();
+  }
+
+  // New method to fetch and update dividends for all assets
+  Future<void> updateAllDividends() async {
+    final stockService = ref.read(stockServiceProvider);
+    final repo = ref.read(assetRepositoryProvider);
+    final currentAssets = state.value?.assets ?? [];
+
+    for (final da in currentAssets) {
+      if (da.asset.type == AssetType.deposit || da.asset.type == AssetType.fund)
+        continue;
+
+      final divInfo = await stockService.getDividendInfo(da.asset.symbol);
+      if (divInfo != null) {
+        final monthsStr = divInfo.months?.join(',');
+        // Update DB via Repository
+        await repo.updateDividend(
+          assetId: da.asset.id,
+          amount: divInfo.annualAmount,
+          months: monthsStr,
+        );
+      }
+    }
     ref.invalidateSelf();
   }
 }

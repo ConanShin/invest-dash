@@ -23,6 +23,8 @@ class Assets extends Table {
   TextColumn get currency => text()(); // KRW, USD
   TextColumn get owner =>
       text().withDefault(const Constant('신철민'))(); // Owner name
+  RealColumn get dividendAmount => real().nullable()(); // Annual div per share
+  TextColumn get dividendMonths => text().nullable()(); // e.g. "1,4,7,10"
 }
 
 class Holdings extends Table {
@@ -37,7 +39,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration {
@@ -50,49 +52,58 @@ class AppDatabase extends _$AppDatabase {
           await m.addColumn(assets, assets.owner);
         }
         if (from < 3) {
-          // Version 3: Remove UNIQUE constraint on 'symbol' by recreating tables.
-
-          await customStatement('PRAGMA foreign_keys = OFF');
-
-          try {
-            // Clean up potentially leftover tables from failed previous runs
-            await customStatement('DROP TABLE IF EXISTS assets_old');
-            await customStatement('DROP TABLE IF EXISTS holdings_old');
-
-            await customStatement('ALTER TABLE assets RENAME TO assets_old');
-            await customStatement(
-                'ALTER TABLE holdings RENAME TO holdings_old');
-
-            // Create new tables with current definition (which has no UNIQUE on symbol)
-            await m.createTable(assets);
-            await m.createTable(holdings);
-
-            // Copy data with INSERT OR REPLACE to avoid ID conflicts
-            await customStatement(
-                "INSERT OR REPLACE INTO assets (id, symbol, name, type, currency, owner) "
-                "SELECT id, symbol, name, type, currency, COALESCE(owner, '신철민') FROM assets_old");
-
-            await customStatement(
-                "INSERT OR REPLACE INTO holdings (id, asset_id, quantity, average_price) "
-                "SELECT id, asset_id, quantity, average_price FROM holdings_old");
-
-            // Fix Auto-Increment Sequence
-            await customStatement(
-                "UPDATE sqlite_sequence SET seq = (SELECT MAX(id) FROM assets) WHERE name = 'assets'");
-            await customStatement(
-                "UPDATE sqlite_sequence SET seq = (SELECT MAX(id) FROM holdings) WHERE name = 'holdings'");
-
-            await customStatement('DROP TABLE assets_old');
-            await customStatement('DROP TABLE holdings_old');
-          } catch (e) {
-            print('Migration Error: $e');
-            rethrow;
-          } finally {
-            await customStatement('PRAGMA foreign_keys = ON');
-          }
+          await _migrateToVersion3(m);
+        }
+        if (from < 4) {
+          await m.addColumn(assets, assets.dividendAmount);
+          await m.addColumn(assets, assets.dividendMonths);
         }
       },
     );
+  }
+
+  Future<void> _migrateToVersion3(Migrator m) async {
+    await customStatement('PRAGMA foreign_keys = OFF');
+
+    try {
+      // Clean up potentially leftover tables from failed previous runs
+      await customStatement('DROP TABLE IF EXISTS assets_old');
+      await customStatement('DROP TABLE IF EXISTS holdings_old');
+
+      await customStatement('ALTER TABLE assets RENAME TO assets_old');
+      await customStatement('ALTER TABLE holdings RENAME TO holdings_old');
+
+      // Create new tables with current definition (which has no UNIQUE on symbol)
+      await m.createTable(assets);
+      await m.createTable(holdings);
+
+      // Copy data with INSERT OR REPLACE to avoid ID conflicts
+      await customStatement(
+        "INSERT OR REPLACE INTO assets (id, symbol, name, type, currency, owner) "
+        "SELECT id, symbol, name, type, currency, COALESCE(owner, '신철민') FROM assets_old",
+      );
+
+      await customStatement(
+        "INSERT OR REPLACE INTO holdings (id, asset_id, quantity, average_price) "
+        "SELECT id, asset_id, quantity, average_price FROM holdings_old",
+      );
+
+      // Fix Auto-Increment Sequence
+      await customStatement(
+        "UPDATE sqlite_sequence SET seq = (SELECT MAX(id) FROM assets) WHERE name = 'assets'",
+      );
+      await customStatement(
+        "UPDATE sqlite_sequence SET seq = (SELECT MAX(id) FROM holdings) WHERE name = 'holdings'",
+      );
+
+      await customStatement('DROP TABLE assets_old');
+      await customStatement('DROP TABLE holdings_old');
+    } catch (e) {
+      print('Migration Error: $e');
+      rethrow;
+    } finally {
+      await customStatement('PRAGMA foreign_keys = ON');
+    }
   }
 }
 

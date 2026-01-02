@@ -11,10 +11,7 @@ class AssetRepository {
   // Get all assets with holdings
   Future<List<AssetWithHolding>> getAllAssets() async {
     final query = _db.select(_db.assets).join([
-      innerJoin(
-        _db.holdings,
-        _db.holdings.assetId.equalsExp(_db.assets.id),
-      ),
+      innerJoin(_db.holdings, _db.holdings.assetId.equalsExp(_db.assets.id)),
     ]);
 
     final result = await query.get();
@@ -39,28 +36,37 @@ class AssetRepository {
   }) async {
     await _db.transaction(() async {
       // Check if asset exists for this owner
-      final asset = await (_db.select(_db.assets)
-            ..where((t) => t.symbol.equals(symbol) & t.owner.equals(owner)))
-          .getSingleOrNull();
+      final asset =
+          await (_db.select(_db.assets)
+                ..where((t) => t.symbol.equals(symbol) & t.owner.equals(owner)))
+              .getSingleOrNull();
 
       int assetId;
       if (asset == null) {
-        assetId = await _db.into(_db.assets).insert(AssetsCompanion(
-              symbol: Value(symbol),
-              name: Value(name),
-              type: Value(type),
-              currency: Value(currency),
-              owner: Value(owner),
-            ));
+        assetId = await _db
+            .into(_db.assets)
+            .insert(
+              AssetsCompanion(
+                symbol: Value(symbol),
+                name: Value(name),
+                type: Value(type),
+                currency: Value(currency),
+                owner: Value(owner),
+              ),
+            );
       } else {
         assetId = asset.id;
       }
 
-      await _db.into(_db.holdings).insert(HoldingsCompanion(
-            assetId: Value(assetId),
-            quantity: Value(quantity),
-            averagePrice: Value(averagePrice),
-          ));
+      await _db
+          .into(_db.holdings)
+          .insert(
+            HoldingsCompanion(
+              assetId: Value(assetId),
+              quantity: Value(quantity),
+              averagePrice: Value(averagePrice),
+            ),
+          );
     });
   }
 
@@ -86,8 +92,9 @@ class AssetRepository {
         ),
       );
 
-      await (_db.update(_db.holdings)..where((t) => t.assetId.equals(assetId)))
-          .write(
+      await (_db.update(
+        _db.holdings,
+      )..where((t) => t.assetId.equals(assetId))).write(
         HoldingsCompanion(
           quantity: Value(quantity),
           averagePrice: Value(averagePrice),
@@ -96,12 +103,26 @@ class AssetRepository {
     });
   }
 
+  // Update dividend information
+  Future<void> updateDividend({
+    required int assetId,
+    required double? amount,
+    required String? months,
+  }) async {
+    await (_db.update(_db.assets)..where((t) => t.id.equals(assetId))).write(
+      AssetsCompanion(
+        dividendAmount: Value(amount),
+        dividendMonths: Value(months),
+      ),
+    );
+  }
+
   // Delete asset
   Future<void> deleteAsset(int assetId) async {
     await _db.transaction(() async {
-      // Drift should handle cascade delete if configured, but let's be safe if it's not
-      await (_db.delete(_db.holdings)..where((t) => t.assetId.equals(assetId)))
-          .go();
+      await (_db.delete(
+        _db.holdings,
+      )..where((t) => t.assetId.equals(assetId))).go();
       await (_db.delete(_db.assets)..where((t) => t.id.equals(assetId))).go();
     });
   }

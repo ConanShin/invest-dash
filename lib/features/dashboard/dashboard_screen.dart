@@ -13,42 +13,62 @@ class DashboardScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('투자 대시보드'), // Localized
+        title: const Text(
+          'Invest Dash',
+          style: TextStyle(
+            fontWeight: FontWeight.w900,
+            fontSize: 24,
+            letterSpacing: -1,
+          ),
+        ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () {
-              // Navigate to Add Asset Screen
-              Navigator.pushNamed(context, '/add_asset');
-            },
+          Container(
+            margin: const EdgeInsets.only(right: 8),
+            decoration: BoxDecoration(
+              color: Theme.of(context).primaryColor.withAlpha(20),
+              shape: BoxShape.circle,
+            ),
+            child: IconButton(
+              icon: Icon(Icons.add, color: Theme.of(context).primaryColor),
+              onPressed: () => Navigator.pushNamed(context, '/add_asset'),
+            ),
           ),
         ],
       ),
       body: assetsAsync.when(
         data: (dashboardState) {
           final totalValue = dashboardState.totalValue;
-          return Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                SummaryCard(totalValue: totalValue),
-                const SizedBox(height: 16),
-                const Text(
-                  '포트폴리오', // Localized
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: SummaryCard(totalValue: totalValue),
+              ),
+              Expanded(
+                child: AssetList(
+                  assets: dashboardState.assets,
+                  exchangeRate: dashboardState.exchangeRate,
                 ),
-                const SizedBox(height: 8),
-                Expanded(
-                    child: AssetList(
-                        assets: dashboardState.assets,
-                        exchangeRate: dashboardState.exchangeRate)),
-              ],
-            ),
+              ),
+            ],
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
+        error: (err, stack) => Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 48, color: Colors.red),
+              const SizedBox(height: 16),
+              Text('오류가 발생했습니다: $err'),
+              TextButton(
+                onPressed: () => ref.invalidate(dashboardViewModelProvider),
+                child: const Text('다시 시도'),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

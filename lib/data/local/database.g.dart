@@ -69,6 +69,28 @@ class $AssetsTable extends Assets with TableInfo<$AssetsTable, Asset> {
     requiredDuringInsert: false,
     defaultValue: const Constant('신철민'),
   );
+  static const VerificationMeta _dividendAmountMeta = const VerificationMeta(
+    'dividendAmount',
+  );
+  @override
+  late final GeneratedColumn<double> dividendAmount = GeneratedColumn<double>(
+    'dividend_amount',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _dividendMonthsMeta = const VerificationMeta(
+    'dividendMonths',
+  );
+  @override
+  late final GeneratedColumn<String> dividendMonths = GeneratedColumn<String>(
+    'dividend_months',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -77,6 +99,8 @@ class $AssetsTable extends Assets with TableInfo<$AssetsTable, Asset> {
     type,
     currency,
     owner,
+    dividendAmount,
+    dividendMonths,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -123,6 +147,24 @@ class $AssetsTable extends Assets with TableInfo<$AssetsTable, Asset> {
         owner.isAcceptableOrUnknown(data['owner']!, _ownerMeta),
       );
     }
+    if (data.containsKey('dividend_amount')) {
+      context.handle(
+        _dividendAmountMeta,
+        dividendAmount.isAcceptableOrUnknown(
+          data['dividend_amount']!,
+          _dividendAmountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('dividend_months')) {
+      context.handle(
+        _dividendMonthsMeta,
+        dividendMonths.isAcceptableOrUnknown(
+          data['dividend_months']!,
+          _dividendMonthsMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -158,6 +200,14 @@ class $AssetsTable extends Assets with TableInfo<$AssetsTable, Asset> {
         DriftSqlType.string,
         data['${effectivePrefix}owner'],
       )!,
+      dividendAmount: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}dividend_amount'],
+      ),
+      dividendMonths: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}dividend_months'],
+      ),
     );
   }
 
@@ -177,6 +227,8 @@ class Asset extends DataClass implements Insertable<Asset> {
   final AssetType type;
   final String currency;
   final String owner;
+  final double? dividendAmount;
+  final String? dividendMonths;
   const Asset({
     required this.id,
     required this.symbol,
@@ -184,6 +236,8 @@ class Asset extends DataClass implements Insertable<Asset> {
     required this.type,
     required this.currency,
     required this.owner,
+    this.dividendAmount,
+    this.dividendMonths,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -196,6 +250,12 @@ class Asset extends DataClass implements Insertable<Asset> {
     }
     map['currency'] = Variable<String>(currency);
     map['owner'] = Variable<String>(owner);
+    if (!nullToAbsent || dividendAmount != null) {
+      map['dividend_amount'] = Variable<double>(dividendAmount);
+    }
+    if (!nullToAbsent || dividendMonths != null) {
+      map['dividend_months'] = Variable<String>(dividendMonths);
+    }
     return map;
   }
 
@@ -207,6 +267,12 @@ class Asset extends DataClass implements Insertable<Asset> {
       type: Value(type),
       currency: Value(currency),
       owner: Value(owner),
+      dividendAmount: dividendAmount == null && nullToAbsent
+          ? const Value.absent()
+          : Value(dividendAmount),
+      dividendMonths: dividendMonths == null && nullToAbsent
+          ? const Value.absent()
+          : Value(dividendMonths),
     );
   }
 
@@ -224,6 +290,8 @@ class Asset extends DataClass implements Insertable<Asset> {
       ),
       currency: serializer.fromJson<String>(json['currency']),
       owner: serializer.fromJson<String>(json['owner']),
+      dividendAmount: serializer.fromJson<double?>(json['dividendAmount']),
+      dividendMonths: serializer.fromJson<String?>(json['dividendMonths']),
     );
   }
   @override
@@ -238,6 +306,8 @@ class Asset extends DataClass implements Insertable<Asset> {
       ),
       'currency': serializer.toJson<String>(currency),
       'owner': serializer.toJson<String>(owner),
+      'dividendAmount': serializer.toJson<double?>(dividendAmount),
+      'dividendMonths': serializer.toJson<String?>(dividendMonths),
     };
   }
 
@@ -248,6 +318,8 @@ class Asset extends DataClass implements Insertable<Asset> {
     AssetType? type,
     String? currency,
     String? owner,
+    Value<double?> dividendAmount = const Value.absent(),
+    Value<String?> dividendMonths = const Value.absent(),
   }) => Asset(
     id: id ?? this.id,
     symbol: symbol ?? this.symbol,
@@ -255,6 +327,12 @@ class Asset extends DataClass implements Insertable<Asset> {
     type: type ?? this.type,
     currency: currency ?? this.currency,
     owner: owner ?? this.owner,
+    dividendAmount: dividendAmount.present
+        ? dividendAmount.value
+        : this.dividendAmount,
+    dividendMonths: dividendMonths.present
+        ? dividendMonths.value
+        : this.dividendMonths,
   );
   Asset copyWithCompanion(AssetsCompanion data) {
     return Asset(
@@ -264,6 +342,12 @@ class Asset extends DataClass implements Insertable<Asset> {
       type: data.type.present ? data.type.value : this.type,
       currency: data.currency.present ? data.currency.value : this.currency,
       owner: data.owner.present ? data.owner.value : this.owner,
+      dividendAmount: data.dividendAmount.present
+          ? data.dividendAmount.value
+          : this.dividendAmount,
+      dividendMonths: data.dividendMonths.present
+          ? data.dividendMonths.value
+          : this.dividendMonths,
     );
   }
 
@@ -275,13 +359,24 @@ class Asset extends DataClass implements Insertable<Asset> {
           ..write('name: $name, ')
           ..write('type: $type, ')
           ..write('currency: $currency, ')
-          ..write('owner: $owner')
+          ..write('owner: $owner, ')
+          ..write('dividendAmount: $dividendAmount, ')
+          ..write('dividendMonths: $dividendMonths')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, symbol, name, type, currency, owner);
+  int get hashCode => Object.hash(
+    id,
+    symbol,
+    name,
+    type,
+    currency,
+    owner,
+    dividendAmount,
+    dividendMonths,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -291,7 +386,9 @@ class Asset extends DataClass implements Insertable<Asset> {
           other.name == this.name &&
           other.type == this.type &&
           other.currency == this.currency &&
-          other.owner == this.owner);
+          other.owner == this.owner &&
+          other.dividendAmount == this.dividendAmount &&
+          other.dividendMonths == this.dividendMonths);
 }
 
 class AssetsCompanion extends UpdateCompanion<Asset> {
@@ -301,6 +398,8 @@ class AssetsCompanion extends UpdateCompanion<Asset> {
   final Value<AssetType> type;
   final Value<String> currency;
   final Value<String> owner;
+  final Value<double?> dividendAmount;
+  final Value<String?> dividendMonths;
   const AssetsCompanion({
     this.id = const Value.absent(),
     this.symbol = const Value.absent(),
@@ -308,6 +407,8 @@ class AssetsCompanion extends UpdateCompanion<Asset> {
     this.type = const Value.absent(),
     this.currency = const Value.absent(),
     this.owner = const Value.absent(),
+    this.dividendAmount = const Value.absent(),
+    this.dividendMonths = const Value.absent(),
   });
   AssetsCompanion.insert({
     this.id = const Value.absent(),
@@ -316,6 +417,8 @@ class AssetsCompanion extends UpdateCompanion<Asset> {
     required AssetType type,
     required String currency,
     this.owner = const Value.absent(),
+    this.dividendAmount = const Value.absent(),
+    this.dividendMonths = const Value.absent(),
   }) : symbol = Value(symbol),
        name = Value(name),
        type = Value(type),
@@ -327,6 +430,8 @@ class AssetsCompanion extends UpdateCompanion<Asset> {
     Expression<String>? type,
     Expression<String>? currency,
     Expression<String>? owner,
+    Expression<double>? dividendAmount,
+    Expression<String>? dividendMonths,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -335,6 +440,8 @@ class AssetsCompanion extends UpdateCompanion<Asset> {
       if (type != null) 'type': type,
       if (currency != null) 'currency': currency,
       if (owner != null) 'owner': owner,
+      if (dividendAmount != null) 'dividend_amount': dividendAmount,
+      if (dividendMonths != null) 'dividend_months': dividendMonths,
     });
   }
 
@@ -345,6 +452,8 @@ class AssetsCompanion extends UpdateCompanion<Asset> {
     Value<AssetType>? type,
     Value<String>? currency,
     Value<String>? owner,
+    Value<double?>? dividendAmount,
+    Value<String?>? dividendMonths,
   }) {
     return AssetsCompanion(
       id: id ?? this.id,
@@ -353,6 +462,8 @@ class AssetsCompanion extends UpdateCompanion<Asset> {
       type: type ?? this.type,
       currency: currency ?? this.currency,
       owner: owner ?? this.owner,
+      dividendAmount: dividendAmount ?? this.dividendAmount,
+      dividendMonths: dividendMonths ?? this.dividendMonths,
     );
   }
 
@@ -379,6 +490,12 @@ class AssetsCompanion extends UpdateCompanion<Asset> {
     if (owner.present) {
       map['owner'] = Variable<String>(owner.value);
     }
+    if (dividendAmount.present) {
+      map['dividend_amount'] = Variable<double>(dividendAmount.value);
+    }
+    if (dividendMonths.present) {
+      map['dividend_months'] = Variable<String>(dividendMonths.value);
+    }
     return map;
   }
 
@@ -390,7 +507,9 @@ class AssetsCompanion extends UpdateCompanion<Asset> {
           ..write('name: $name, ')
           ..write('type: $type, ')
           ..write('currency: $currency, ')
-          ..write('owner: $owner')
+          ..write('owner: $owner, ')
+          ..write('dividendAmount: $dividendAmount, ')
+          ..write('dividendMonths: $dividendMonths')
           ..write(')'))
         .toString();
   }
@@ -723,6 +842,8 @@ typedef $$AssetsTableCreateCompanionBuilder =
       required AssetType type,
       required String currency,
       Value<String> owner,
+      Value<double?> dividendAmount,
+      Value<String?> dividendMonths,
     });
 typedef $$AssetsTableUpdateCompanionBuilder =
     AssetsCompanion Function({
@@ -732,6 +853,8 @@ typedef $$AssetsTableUpdateCompanionBuilder =
       Value<AssetType> type,
       Value<String> currency,
       Value<String> owner,
+      Value<double?> dividendAmount,
+      Value<String?> dividendMonths,
     });
 
 final class $$AssetsTableReferences
@@ -795,6 +918,16 @@ class $$AssetsTableFilterComposer
 
   ColumnFilters<String> get owner => $composableBuilder(
     column: $table.owner,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get dividendAmount => $composableBuilder(
+    column: $table.dividendAmount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get dividendMonths => $composableBuilder(
+    column: $table.dividendMonths,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -862,6 +995,16 @@ class $$AssetsTableOrderingComposer
     column: $table.owner,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<double> get dividendAmount => $composableBuilder(
+    column: $table.dividendAmount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get dividendMonths => $composableBuilder(
+    column: $table.dividendMonths,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$AssetsTableAnnotationComposer
@@ -890,6 +1033,16 @@ class $$AssetsTableAnnotationComposer
 
   GeneratedColumn<String> get owner =>
       $composableBuilder(column: $table.owner, builder: (column) => column);
+
+  GeneratedColumn<double> get dividendAmount => $composableBuilder(
+    column: $table.dividendAmount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get dividendMonths => $composableBuilder(
+    column: $table.dividendMonths,
+    builder: (column) => column,
+  );
 
   Expression<T> holdingsRefs<T extends Object>(
     Expression<T> Function($$HoldingsTableAnnotationComposer a) f,
@@ -951,6 +1104,8 @@ class $$AssetsTableTableManager
                 Value<AssetType> type = const Value.absent(),
                 Value<String> currency = const Value.absent(),
                 Value<String> owner = const Value.absent(),
+                Value<double?> dividendAmount = const Value.absent(),
+                Value<String?> dividendMonths = const Value.absent(),
               }) => AssetsCompanion(
                 id: id,
                 symbol: symbol,
@@ -958,6 +1113,8 @@ class $$AssetsTableTableManager
                 type: type,
                 currency: currency,
                 owner: owner,
+                dividendAmount: dividendAmount,
+                dividendMonths: dividendMonths,
               ),
           createCompanionCallback:
               ({
@@ -967,6 +1124,8 @@ class $$AssetsTableTableManager
                 required AssetType type,
                 required String currency,
                 Value<String> owner = const Value.absent(),
+                Value<double?> dividendAmount = const Value.absent(),
+                Value<String?> dividendMonths = const Value.absent(),
               }) => AssetsCompanion.insert(
                 id: id,
                 symbol: symbol,
@@ -974,6 +1133,8 @@ class $$AssetsTableTableManager
                 type: type,
                 currency: currency,
                 owner: owner,
+                dividendAmount: dividendAmount,
+                dividendMonths: dividendMonths,
               ),
           withReferenceMapper: (p0) => p0
               .map(

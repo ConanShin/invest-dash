@@ -7,8 +7,11 @@ class AssetList extends StatelessWidget {
   final List<DashboardAsset> assets;
   final double exchangeRate;
 
-  const AssetList(
-      {super.key, required this.assets, required this.exchangeRate});
+  const AssetList({
+    super.key,
+    required this.assets,
+    required this.exchangeRate,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -40,6 +43,7 @@ class AssetList extends StatelessWidget {
     }
 
     return ListView.builder(
+      padding: const EdgeInsets.only(bottom: 100), // Space for FAB if any
       itemCount: listItems.length,
       itemBuilder: (context, index) {
         return listItems[index];
@@ -48,16 +52,28 @@ class AssetList extends StatelessWidget {
   }
 
   Widget _buildOwnerHeader(String owner) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      color: Colors.grey.withAlpha(25), // Safe alternative for withOpacity
-      child: Text(
-        '$owner의 자산',
-        style: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-          color: Colors.black87,
-        ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
+      child: Row(
+        children: [
+          Container(
+            width: 4,
+            height: 20,
+            decoration: BoxDecoration(
+              color: Colors.indigo,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            '$owner의 포트폴리오',
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.5,
+            ),
+          ),
+        ],
       ),
     );
   }

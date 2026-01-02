@@ -50,16 +50,19 @@ class _LiveAssetRowState extends ConsumerState<LiveAssetRow> {
     _timer = Timer(Duration(seconds: initialDelaySeconds), () {
       _refreshPrice();
       // Then start the 5-minute interval
-      _timer =
-          Timer.periodic(const Duration(minutes: 5), (_) => _refreshPrice());
+      _timer = Timer.periodic(
+        const Duration(minutes: 5),
+        (_) => _refreshPrice(),
+      );
     });
   }
 
   Future<void> _refreshPrice() async {
     final stockService = ref.read(stockServiceProvider);
     try {
-      final prices =
-          await stockService.getPrices([widget.assetItem.asset.symbol]);
+      final prices = await stockService.getPrices([
+        widget.assetItem.asset.symbol,
+      ]);
       if (prices.containsKey(widget.assetItem.asset.symbol)) {
         final newPrice = prices[widget.assetItem.asset.symbol]!;
         if (newPrice != _currentPrice) {
@@ -96,7 +99,7 @@ class _LiveAssetRowState extends ConsumerState<LiveAssetRow> {
     final investment = isDeposit
         ? widget.assetItem.holding.averagePrice
         : widget.assetItem.holding.quantity *
-            widget.assetItem.holding.averagePrice;
+              widget.assetItem.holding.averagePrice;
 
     final currentVal = isDeposit
         ? widget.assetItem.holding.averagePrice
@@ -112,9 +115,22 @@ class _LiveAssetRowState extends ConsumerState<LiveAssetRow> {
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 500),
-      color: _flashColor,
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      decoration: BoxDecoration(
+        color: _flashColor == Colors.transparent
+            ? Theme.of(context).cardColor
+            : _flashColor,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(10),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+        padding: const EdgeInsets.all(16.0),
         child: Row(
           children: [
             _buildAssetIcon(widget.assetItem.asset.type),
@@ -123,45 +139,62 @@ class _LiveAssetRowState extends ConsumerState<LiveAssetRow> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(widget.assetItem.asset.name,
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Text(
-                        isDeposit
-                            ? '이자율 ${widget.assetItem.holding.quantity}% | 예치금 $symbol${widget.assetItem.holding.averagePrice.toStringAsFixed(0)}'
-                            : '${widget.assetItem.holding.quantity} @ $symbol${widget.assetItem.holding.averagePrice.toStringAsFixed(isUsd ? 2 : 0)} -> $symbol${_currentPrice.toStringAsFixed(isUsd ? 2 : 0)}',
-                        style:
-                            const TextStyle(fontSize: 12, color: Colors.grey),
-                      ),
-                    ],
+                  Text(
+                    widget.assetItem.asset.name,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.5,
+                    ),
                   ),
-                  if (isUsd && !isDeposit) ...[
-                    Text(
-                      '≈ ₩${(currentVal * widget.exchangeRate).toStringAsFixed(0)}',
-                      style: const TextStyle(fontSize: 11, color: Colors.grey),
-                    )
-                  ]
+                  const SizedBox(height: 4),
+                  Text(
+                    isDeposit
+                        ? '이자율 ${widget.assetItem.holding.quantity}% | 예치금 $symbol${widget.assetItem.holding.averagePrice.toStringAsFixed(0)}'
+                        : '${widget.assetItem.holding.quantity.toStringAsFixed(widget.assetItem.holding.quantity == widget.assetItem.holding.quantity.toInt() ? 0 : 2)}주 • 현재가격 $symbol${_currentPrice.toStringAsFixed(isUsd ? 2 : 0)}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.color?.withAlpha(180),
+                    ),
+                  ),
                 ],
               ),
             ),
             Column(
-              mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
                   '$symbol${currentVal.toStringAsFixed(isUsd ? 2 : 0)}',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
-                if (!isDeposit)
-                  Text(
-                    '${isProfit ? '+' : ''}${profitPercent.toStringAsFixed(1)}%',
-                    style: TextStyle(
-                      color: isProfit ? Colors.red : Colors.blue,
-                      fontSize: 12,
+                if (!isDeposit) ...[
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: (isProfit ? Colors.red : Colors.blue).withAlpha(
+                        30,
+                      ),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      '${isProfit ? '▲' : '▼'} ${profitPercent.abs().toStringAsFixed(1)}%',
+                      style: TextStyle(
+                        color: isProfit ? Colors.red[700] : Colors.blue[700],
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
+                ],
               ],
             ),
           ],
