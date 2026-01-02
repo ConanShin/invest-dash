@@ -91,28 +91,30 @@ class StockSearchService {
     }
 
     try {
-      final response =
-          await _dio.get('https://query1.finance.yahoo.com/v1/finance/search',
-              queryParameters: {
-                'q': query,
-                'lang':
-                    'en-US', // Keep EN for global, or ko-KR? Yahoo might support ko-KR.
-                'quotesCount': 20,
-                'newsCount': 0,
-              },
-              options: Options(headers: {
-                // Yahoo sometimes blocks requests without User-Agent
-                'User-Agent': 'Mozilla/5.0'
-              }));
+      final url = 'https://query1.finance.yahoo.com/v1/finance/search';
+      final params = {
+        'q': query,
+        'lang': 'en-US',
+        'quotesCount': 20,
+        'newsCount': 0,
+      };
+
+      print('DEBUG: Stock Search Request -> $url with params: $params');
+
+      final response = await _dio.get(url,
+          queryParameters: params,
+          options: Options(headers: {'User-Agent': 'Mozilla/5.0'}));
+
+      print('DEBUG: Stock Search Response Status -> ${response.statusCode}');
 
       final data = response.data;
       if (data != null && data['quotes'] != null) {
-        final quotes = data['quotes'] as List;
-        return quotes
+        final quotes = (data['quotes'] as List)
             .where((item) =>
                 item['quoteType'] == 'EQUITY' || item['quoteType'] == 'ETF')
-            .map((item) => StockSearchResult.fromJson(item))
             .toList();
+        print('DEBUG: Stock Search Results Count -> ${quotes.length}');
+        return quotes.map((item) => StockSearchResult.fromJson(item)).toList();
       }
       return [];
     } catch (e) {

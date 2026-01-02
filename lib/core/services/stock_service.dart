@@ -31,12 +31,16 @@ class YahooStockService implements StockService {
     for (final symbol in symbols) {
       if (symbol.isEmpty) continue;
       try {
-        final response = await _dio.get(
-            'https://query1.finance.yahoo.com/v8/finance/chart/$symbol',
-            queryParameters: {
-              'interval': '1d',
-              'range': '1d',
-            },
+        final url = 'https://query1.finance.yahoo.com/v8/finance/chart/$symbol';
+        final params = {
+          'interval': '1d',
+          'range': '1d',
+        };
+
+        print('DEBUG: Fetch Price Request -> $url');
+
+        final response = await _dio.get(url,
+            queryParameters: params,
             options: Options(
               headers: {
                 'User-Agent':
@@ -47,10 +51,14 @@ class YahooStockService implements StockService {
                   status! < 500, // Handle 404/429 gracefully
             ));
 
+        print(
+            'DEBUG: Fetch Price Response Status ($symbol) -> ${response.statusCode}');
+
         if (response.statusCode == 200) {
           final data = response.data;
           final meta = data['chart']['result'][0]['meta'];
           final price = meta['regularMarketPrice'] as num?;
+          print('DEBUG: Fetched Price ($symbol) -> $price');
           if (price != null) {
             prices[symbol] = price.toDouble();
           }
@@ -67,12 +75,16 @@ class YahooStockService implements StockService {
   @override
   Future<double> getExchangeRate() async {
     try {
-      final response = await _dio.get(
-          'https://query1.finance.yahoo.com/v8/finance/chart/KRW=X',
-          queryParameters: {
-            'interval': '1d',
-            'range': '1d',
-          },
+      final url = 'https://query1.finance.yahoo.com/v8/finance/chart/KRW=X';
+      final params = {
+        'interval': '1d',
+        'range': '1d',
+      };
+
+      print('DEBUG: Fetch Exchange Rate Request -> $url');
+
+      final response = await _dio.get(url,
+          queryParameters: params,
           options: Options(
             headers: {
               'User-Agent':
@@ -82,11 +94,15 @@ class YahooStockService implements StockService {
             validateStatus: (status) => status! < 500,
           ));
 
+      print(
+          'DEBUG: Fetch Exchange Rate Response Status -> ${response.statusCode}');
+
       if (response.statusCode == 200) {
         final data = response.data;
         final meta = data['chart']['result'][0]['meta'];
         // regularMarketPrice for currencies usually works
         final price = meta['regularMarketPrice'] as num?;
+        print('DEBUG: Fetched Exchange Rate -> $price');
         if (price != null) {
           return price.toDouble();
         }
