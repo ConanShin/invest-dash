@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../data/repository/asset_repository.dart';
 import '../../../core/providers/data_providers.dart';
@@ -17,9 +18,9 @@ class DashboardAsset {
     required this.holding,
     required this.currentPrice,
   }) : totalValue = asset.type == AssetType.deposit
-            ? holding
-                .averagePrice // For deposit, avgPrice is the Principal Amount
-            : holding.quantity * currentPrice;
+           ? holding
+                 .averagePrice // For deposit, avgPrice is the Principal Amount
+           : holding.quantity * currentPrice;
 }
 
 class DashboardState {
@@ -41,6 +42,13 @@ class DashboardViewModel extends _$DashboardViewModel {
     final repo = ref.watch(assetRepositoryProvider);
     final stockService = ref.watch(stockServiceProvider);
 
+    // Setup periodic refresh every 10 minutes
+    final timer = Timer.periodic(const Duration(minutes: 10), (t) {
+      print('DEBUG: Periodic dashboard refresh triggered (10 min)');
+      ref.invalidateSelf();
+    });
+    ref.onDispose(() => timer.cancel());
+
     // 1. Get Exchange Rate
     final exchangeRate = await stockService.getExchangeRate();
 
@@ -49,15 +57,20 @@ class DashboardViewModel extends _$DashboardViewModel {
 
     if (assetsWithHoldings.isEmpty) {
       return DashboardState(
-          totalValue: 0, assets: [], exchangeRate: exchangeRate);
+        totalValue: 0,
+        assets: [],
+        exchangeRate: exchangeRate,
+      );
     }
 
     // 3. Get Prices
     final symbols = assetsWithHoldings
-        .where((e) =>
-            e.asset.type != AssetType.deposit &&
-            e.asset.type != AssetType.fund &&
-            !e.asset.symbol.startsWith('MANUAL_'))
+        .where(
+          (e) =>
+              e.asset.type != AssetType.deposit &&
+              e.asset.type != AssetType.fund &&
+              !e.asset.symbol.startsWith('MANUAL_'),
+        )
         .map((e) => e.asset.symbol)
         .toList();
     final prices = await stockService.getPrices(symbols);
@@ -90,9 +103,10 @@ class DashboardViewModel extends _$DashboardViewModel {
     });
 
     return DashboardState(
-        totalValue: totalValue,
-        assets: dashboardAssets,
-        exchangeRate: exchangeRate);
+      totalValue: totalValue,
+      assets: dashboardAssets,
+      exchangeRate: exchangeRate,
+    );
   }
 
   Future<void> refresh() async {
