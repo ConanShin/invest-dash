@@ -47,17 +47,17 @@ class DashboardViewModel extends _$DashboardViewModel {
     final repo = ref.watch(assetRepositoryProvider);
     final stockService = ref.watch(stockServiceProvider);
 
-    // Setup periodic refresh every 10 minutes
-    final timer = Timer.periodic(const Duration(minutes: 10), (t) {
-      print('DEBUG: Periodic dashboard refresh triggered (10 min)');
-      ref.invalidateSelf();
+    // Setup periodic refresh every 1 minute
+    final timer = Timer.periodic(const Duration(minutes: 1), (t) {
+      print('DEBUG: Periodic dashboard refresh triggered (1 min)');
+      _fetchCurrentPrices();
     });
     ref.onDispose(() => timer.cancel());
 
-    // 1. Get Exchange Rate
+    // 1. Get Exchange Rate (Cached or quick fetch)
     final exchangeRate = await stockService.getExchangeRate();
 
-    // 2. Get Assets
+    // 2. Get Assets from DB
     final assetsWithHoldings = await repo.getAllAssets();
 
     if (assetsWithHoldings.isEmpty) {
@@ -68,24 +68,9 @@ class DashboardViewModel extends _$DashboardViewModel {
       );
     }
 
-    // 3. Get Prices
-    final symbols = assetsWithHoldings
-        .where(
-          (e) =>
-              e.asset.type != AssetType.deposit &&
-              e.asset.type != AssetType.fund &&
-              !e.asset.symbol.startsWith('MANUAL_'),
-        )
-        .map((e) => e.asset.symbol)
-        .toList();
-    final prices = await stockService.getPrices(symbols);
-
-    // 4. Map to DashboardAsset
-    final List<DashboardAsset> dashboardAssets = [];
+    // 3. Create initial state with prices from DB (averagePrice)
+    final List<DashboardAsset> initialDashboardAssets = [];
     for (final item in assetsWithHoldings) {
-      final currentPrice =
-          prices[item.asset.symbol] ?? item.holding.averagePrice;
-
       List<int>? divMonths;
       if (item.asset.dividendMonths != null &&
           item.asset.dividendMonths!.isNotEmpty) {
@@ -95,43 +80,107 @@ class DashboardViewModel extends _$DashboardViewModel {
             .toList();
       }
 
-      dashboardAssets.add(
+      initialDashboardAssets.add(
         DashboardAsset(
           asset: item.asset,
           holding: item.holding,
-          currentPrice: currentPrice,
+          currentPrice: item.holding.averagePrice, // Start with avg price
           dividendAmount: item.asset.dividendAmount,
           dividendMonths: divMonths,
         ),
       );
     }
 
-    // 5. Calculate Total (in KRW)
-    final totalValue = dashboardAssets.fold(0.0, (sum, item) {
+    final initialState = DashboardState(
+      totalValue: _calculateTotal(initialDashboardAssets, exchangeRate),
+      assets: _applySort(initialDashboardAssets),
+      exchangeRate: exchangeRate,
+    );
+
+    // 4. Kick off incremental price fetch
+    _fetchCurrentPrices();
+
+    return initialState;
+  }
+
+  double _calculateTotal(List<DashboardAsset> assets, double exchangeRate) {
+    return assets.fold(0.0, (sum, item) {
       double itemValue = item.totalValue;
       if (item.asset.currency == 'USD') {
         itemValue *= exchangeRate;
       }
       return sum + itemValue;
     });
+  }
 
-    // Sort: Owner -> Type
-    dashboardAssets.sort((a, b) {
+  List<DashboardAsset> _applySort(List<DashboardAsset> assets) {
+    final sorted = List<DashboardAsset>.from(assets);
+    sorted.sort((a, b) {
       final ownerCompare = a.asset.owner.compareTo(b.asset.owner);
       if (ownerCompare != 0) return ownerCompare;
       return a.asset.type.index.compareTo(b.asset.type.index);
     });
-
-    return DashboardState(
-      totalValue: totalValue,
-      assets: dashboardAssets,
-      exchangeRate: exchangeRate,
-    );
+    return sorted;
   }
 
   Future<void> refresh() async {
-    state = const AsyncValue.loading();
-    ref.invalidateSelf();
+    // Avoid setting loading state to keep UI interactive
+    await _fetchCurrentPrices();
+  }
+
+  Future<void> _fetchCurrentPrices() async {
+    final stockService = ref.read(stockServiceProvider);
+    final currentState = state.value;
+    if (currentState == null) return;
+
+    final symbols = currentState.assets
+        .where(
+          (e) =>
+              e.asset.type != AssetType.deposit &&
+              e.asset.type != AssetType.fund &&
+              !e.asset.symbol.startsWith('MANUAL_'),
+        )
+        .map((e) => e.asset.symbol)
+        .toSet()
+        .toList();
+
+    for (final symbol in symbols) {
+      try {
+        final prices = await stockService.getPrices([symbol]);
+        if (prices.containsKey(symbol)) {
+          final newPrice = prices[symbol]!;
+          _updateSinglePrice(symbol, newPrice);
+        }
+      } catch (e) {
+        print('Error fetching incremental price for $symbol: $e');
+      }
+    }
+  }
+
+  void _updateSinglePrice(String symbol, double price) {
+    final currentState = state.value;
+    if (currentState == null) return;
+
+    final newAssets = currentState.assets.map((da) {
+      if (da.asset.symbol == symbol) {
+        return DashboardAsset(
+          asset: da.asset,
+          holding: da.holding,
+          currentPrice: price,
+          dividendAmount: da.dividendAmount,
+          dividendMonths: da.dividendMonths,
+        );
+      }
+      return da;
+    }).toList();
+
+    state = AsyncData(
+      DashboardState(
+        totalValue: _calculateTotal(newAssets, currentState.exchangeRate),
+        assets: _applySort(newAssets),
+        exchangeRate: currentState.exchangeRate,
+      ),
+    );
   }
 
   // New method to fetch and update dividends for all assets
@@ -155,6 +204,7 @@ class DashboardViewModel extends _$DashboardViewModel {
         );
       }
     }
+    // Final refresh to get all data updated
     ref.invalidateSelf();
   }
 }

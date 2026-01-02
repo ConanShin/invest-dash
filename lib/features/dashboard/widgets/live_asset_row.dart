@@ -1,10 +1,7 @@
-import 'dart:async';
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../dashboard_view_model.dart';
 import '../../../data/local/database.dart';
-import '../../../core/services/stock_service.dart';
 
 class LiveAssetRow extends ConsumerStatefulWidget {
   final DashboardAsset assetItem;
@@ -21,78 +18,38 @@ class LiveAssetRow extends ConsumerStatefulWidget {
 }
 
 class _LiveAssetRowState extends ConsumerState<LiveAssetRow> {
-  late double _currentPrice;
-  Timer? _timer;
   Color _flashColor = Colors.transparent;
-  final Random _random = Random();
 
   @override
-  void initState() {
-    super.initState();
-    _currentPrice = widget.assetItem.currentPrice;
-
-    // Don't auto-refresh Deposit or Funds (manual/static)
-    if (widget.assetItem.asset.type != AssetType.deposit &&
-        widget.assetItem.asset.type != AssetType.fund) {
-      _scheduleRandomInitialRefresh();
-    }
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  void _scheduleRandomInitialRefresh() {
-    // Random delay between 0 and 5 minutes (300 seconds) for the first refresh
-    final initialDelaySeconds = _random.nextInt(300);
-    _timer = Timer(Duration(seconds: initialDelaySeconds), () {
-      _refreshPrice();
-      // Then start the 5-minute interval
-      _timer = Timer.periodic(
-        const Duration(minutes: 5),
-        (_) => _refreshPrice(),
+  void didUpdateWidget(LiveAssetRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.assetItem.currentPrice != oldWidget.assetItem.currentPrice) {
+      _triggerFlash(
+        widget.assetItem.currentPrice > oldWidget.assetItem.currentPrice,
       );
-    });
+    }
   }
 
-  Future<void> _refreshPrice() async {
-    final stockService = ref.read(stockServiceProvider);
-    try {
-      final prices = await stockService.getPrices([
-        widget.assetItem.asset.symbol,
-      ]);
-      if (prices.containsKey(widget.assetItem.asset.symbol)) {
-        final newPrice = prices[widget.assetItem.asset.symbol]!;
-        if (newPrice != _currentPrice) {
-          if (mounted) {
-            setState(() {
-              final isUp = newPrice > _currentPrice;
-              _currentPrice = newPrice;
-              _flashColor = isUp
-                  ? Colors.green.withValues(alpha: 0.3)
-                  : Colors.red.withValues(alpha: 0.3);
-            });
+  void _triggerFlash(bool isUp) {
+    setState(() {
+      _flashColor = isUp
+          ? Colors.green.withValues(alpha: 0.3)
+          : Colors.red.withValues(alpha: 0.3);
+    });
 
-            // Reset flash color after a short delay
-            Future.delayed(const Duration(milliseconds: 500), () {
-              if (mounted) {
-                setState(() {
-                  _flashColor = Colors.transparent;
-                });
-              }
-            });
-          }
-        }
+    // Reset flash color after a short delay
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        setState(() {
+          _flashColor = Colors.transparent;
+        });
       }
-    } catch (e) {
-      debugPrint('Live refresh error for ${widget.assetItem.asset.symbol}: $e');
-    }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final _currentPrice = widget.assetItem.currentPrice;
     final isDeposit = widget.assetItem.asset.type == AssetType.deposit;
 
     // Recalculate P/L based on potentially updated _currentPrice
