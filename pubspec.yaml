@@ -46,6 +46,7 @@ dependencies:
   fl_chart: ^0.71.0
   share_plus: ^10.1.4
   file_picker: ^8.1.7
+  html: ^0.15.5
 
 dev_dependencies:
   flutter_test:

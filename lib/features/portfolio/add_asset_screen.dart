@@ -6,6 +6,7 @@ import 'add_asset_view_model.dart';
 import '../dashboard/dashboard_view_model.dart'
     show dashboardViewModelProvider, DashboardAsset;
 import '../../core/services/stock_search_service.dart';
+import '../../core/services/fund_search_service.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 
 class AddAssetScreen extends ConsumerStatefulWidget {
@@ -329,6 +330,12 @@ class _AddAssetScreenState extends ConsumerState<AddAssetScreen> {
                 },
                 suggestionsCallback: (pattern) async {
                   if (pattern.length < 2) return [];
+
+                  if (_type == AssetType.fund) {
+                    final fundService = ref.read(fundSearchServiceProvider);
+                    return await fundService.search(pattern);
+                  }
+
                   final service = ref.read(stockSearchServiceProvider);
                   final results = await service.search(pattern);
 
@@ -342,11 +349,11 @@ class _AddAssetScreenState extends ConsumerState<AddAssetScreen> {
                           item.exchange.contains('KOSDAQ') ||
                           item.exchange.contains('Seoul');
                     }
-                    if (_type == AssetType.fund) {
-                      return item.typeDisplay == 'Fund' ||
-                          item.symbol.startsWith('MANUAL_KB_');
+                    if (_type == AssetType.etf) {
+                      return item.typeDisplay.toUpperCase().contains('ETF');
                     }
-                    return true;
+                    // Filter out funds from Yahoo results as we use FundDoctor for funds
+                    return item.typeDisplay.toUpperCase() != 'FUND';
                   }).toList();
                 },
                 itemBuilder: (context, suggestion) {

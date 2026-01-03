@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import '../../../core/services/fund_search_service.dart';
 import '../../../core/providers/data_providers.dart';
 import '../../../core/services/stock_service.dart';
 import '../../../data/local/database.dart';
@@ -142,29 +143,69 @@ class DashboardViewModel extends _$DashboardViewModel {
 
   Future<void> _fetchCurrentPrices() async {
     final stockService = ref.read(stockServiceProvider);
+    final fundService = ref.read(fundSearchServiceProvider);
     final currentState = state.value;
     if (currentState == null) return;
 
-    final symbols = currentState.assets
-        .where(
-          (e) =>
-              e.asset.type != AssetType.deposit &&
-              !e.asset.symbol.startsWith('MANUAL_') &&
-              e.asset.symbol.isNotEmpty,
-        )
+    final fetchableAssets = currentState.assets.where(
+      (e) =>
+          e.asset.type != AssetType.deposit &&
+          !e.asset.symbol.startsWith('MANUAL_') &&
+          e.asset.symbol.isNotEmpty,
+    );
+
+    final stockSymbols = fetchableAssets
+        .where((e) => e.asset.type != AssetType.fund)
         .map((e) => e.asset.symbol)
         .toSet()
         .toList();
 
-    if (symbols.isEmpty) return;
+    final fundSymbols = fetchableAssets
+        .where((e) => e.asset.type == AssetType.fund)
+        .map((e) => e.asset.symbol)
+        .toSet()
+        .toList();
+
+    if (stockSymbols.isEmpty && fundSymbols.isEmpty) return;
 
     try {
-      final allPrices = await stockService.getPrices(symbols);
+      final results = await Future.wait([
+        if (stockSymbols.isNotEmpty) stockService.getPrices(stockSymbols),
+        if (fundSymbols.isNotEmpty)
+          _getFundPrices(fundService, fundSymbols)
+        else
+          Future.value(<String, StockPriceData>{}),
+      ]);
+
+      final Map<String, StockPriceData> allPrices = {};
+      for (final result in results) {
+        allPrices.addAll(result);
+      }
+
       _updateAllPrices(allPrices);
     } catch (e) {
       print('Error fetching batched prices: $e');
       _updateAllPrices({}); // Trigger fallback to average price on error
     }
+  }
+
+  Future<Map<String, StockPriceData>> _getFundPrices(
+    FundSearchService fundService,
+    List<String> symbols,
+  ) async {
+    final Map<String, StockPriceData> fundPrices = {};
+    final results = await Future.wait(
+      symbols.map((symbol) async {
+        final price = await fundService.getLatestPrice(symbol);
+        if (price != null) return MapEntry(symbol, price);
+        return null;
+      }),
+    );
+
+    for (var result in results) {
+      if (result != null) fundPrices[result.key] = result.value;
+    }
+    return fundPrices;
   }
 
   void _updateAllPrices(Map<String, StockPriceData> allPrices) {
