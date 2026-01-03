@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:file_picker/file_picker.dart';
@@ -159,10 +160,19 @@ class SettingsScreen extends ConsumerWidget {
 
       final jsonString = const JsonEncoder.withIndent('  ').convert(data);
       final directory = await getTemporaryDirectory();
-      final file = File('${directory.path}/invest_dash_backup.json');
+      final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+      final file = File('${directory.path}/invest_dash_backup_$timestamp.json');
       await file.writeAsString(jsonString);
 
-      await Share.shareXFiles([XFile(file.path)], text: 'Invest Dash 자산 백업');
+      final box = context.findRenderObject() as RenderBox?;
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: '인베스트 대시 자산 데이터 백업 파일입니다.',
+        subject: '[인베스트 대시] 자산 데이터 백업_$timestamp',
+        sharePositionOrigin: box != null
+            ? box.localToGlobal(Offset.zero) & box.size
+            : null,
+      );
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(
