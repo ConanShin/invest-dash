@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import '../../../data/repository/asset_repository.dart';
 import '../../../core/providers/data_providers.dart';
 import '../../../core/services/stock_service.dart';
 import '../../../data/local/database.dart';
@@ -11,6 +10,7 @@ class DashboardAsset {
   final Asset asset;
   final Holding holding;
   final double currentPrice;
+  final double previousClose;
   final double totalValue;
   final double? dividendAmount;
   final List<int>? dividendMonths;
@@ -19,11 +19,16 @@ class DashboardAsset {
     required this.asset,
     required this.holding,
     required this.currentPrice,
+    required this.previousClose,
     this.dividendAmount,
     this.dividendMonths,
   }) : totalValue = asset.type == AssetType.deposit
            ? holding.averagePrice
            : holding.quantity * currentPrice;
+
+  double get priceChange => currentPrice - previousClose;
+  double get priceChangePercent =>
+      previousClose > 0 ? (priceChange / previousClose) * 100 : 0;
 
   double get annualDividendValue => (dividendAmount ?? 0) * holding.quantity;
 }
@@ -32,11 +37,15 @@ class DashboardState {
   final double totalValue;
   final List<DashboardAsset> assets;
   final double exchangeRate;
+  final List<DashboardAsset> topGainers;
+  final List<DashboardAsset> topLosers;
 
   DashboardState({
     required this.totalValue,
     required this.assets,
     required this.exchangeRate,
+    this.topGainers = const [],
+    this.topLosers = const [],
   });
 }
 
@@ -49,15 +58,11 @@ class DashboardViewModel extends _$DashboardViewModel {
 
     // Setup periodic refresh every 1 minute
     final timer = Timer.periodic(const Duration(minutes: 1), (t) {
-      print('DEBUG: Periodic dashboard refresh triggered (1 min)');
       _fetchCurrentPrices();
     });
     ref.onDispose(() => timer.cancel());
 
-    // 1. Get Exchange Rate (Cached or quick fetch)
     final exchangeRate = await stockService.getExchangeRate();
-
-    // 2. Get Assets from DB
     final assetsWithHoldings = await repo.getAllAssets();
 
     if (assetsWithHoldings.isEmpty) {
@@ -68,7 +73,6 @@ class DashboardViewModel extends _$DashboardViewModel {
       );
     }
 
-    // 3. Create initial state with prices from DB (averagePrice)
     final List<DashboardAsset> initialDashboardAssets = [];
     for (final item in assetsWithHoldings) {
       List<int>? divMonths;
@@ -80,11 +84,16 @@ class DashboardViewModel extends _$DashboardViewModel {
             .toList();
       }
 
+      final isPriceFetchable =
+          item.asset.type != AssetType.deposit &&
+          !item.asset.symbol.startsWith('MANUAL_');
+
       initialDashboardAssets.add(
         DashboardAsset(
           asset: item.asset,
           holding: item.holding,
-          currentPrice: item.holding.averagePrice, // Start with avg price
+          currentPrice: isPriceFetchable ? 0.0 : item.holding.averagePrice,
+          previousClose: isPriceFetchable ? 0.0 : item.holding.averagePrice,
           dividendAmount: item.asset.dividendAmount,
           dividendMonths: divMonths,
         ),
@@ -97,8 +106,8 @@ class DashboardViewModel extends _$DashboardViewModel {
       exchangeRate: exchangeRate,
     );
 
-    // 4. Kick off incremental price fetch
-    _fetchCurrentPrices();
+    // Fetch prices in next microtask so that 'state.value' is available
+    Future.microtask(() => _fetchCurrentPrices());
 
     return initialState;
   }
@@ -124,8 +133,11 @@ class DashboardViewModel extends _$DashboardViewModel {
   }
 
   Future<void> refresh() async {
-    // Avoid setting loading state to keep UI interactive
+    print('DEBUG: Manual Refresh Started');
+    ref.invalidateSelf();
+    await future;
     await _fetchCurrentPrices();
+    print('DEBUG: Manual Refresh Completed');
   }
 
   Future<void> _fetchCurrentPrices() async {
@@ -137,36 +149,56 @@ class DashboardViewModel extends _$DashboardViewModel {
         .where(
           (e) =>
               e.asset.type != AssetType.deposit &&
-              e.asset.type != AssetType.fund &&
-              !e.asset.symbol.startsWith('MANUAL_'),
+              !e.asset.symbol.startsWith('MANUAL_') &&
+              e.asset.symbol.isNotEmpty,
         )
         .map((e) => e.asset.symbol)
         .toSet()
         .toList();
 
-    for (final symbol in symbols) {
-      try {
-        final prices = await stockService.getPrices([symbol]);
-        if (prices.containsKey(symbol)) {
-          final newPrice = prices[symbol]!;
-          _updateSinglePrice(symbol, newPrice);
-        }
-      } catch (e) {
-        print('Error fetching incremental price for $symbol: $e');
-      }
+    if (symbols.isEmpty) return;
+
+    try {
+      final allPrices = await stockService.getPrices(symbols);
+      _updateAllPrices(allPrices);
+    } catch (e) {
+      print('Error fetching batched prices: $e');
+      _updateAllPrices({}); // Trigger fallback to average price on error
     }
   }
 
-  void _updateSinglePrice(String symbol, double price) {
+  void _updateAllPrices(Map<String, StockPriceData> allPrices) {
     final currentState = state.value;
     if (currentState == null) return;
 
+    final Map<String, StockPriceData> normalizedPrices = allPrices.map(
+      (key, value) => MapEntry(key.toUpperCase(), value),
+    );
+
     final newAssets = currentState.assets.map((da) {
-      if (da.asset.symbol == symbol) {
+      final normalizedSymbol = da.asset.symbol.toUpperCase();
+      if (normalizedPrices.containsKey(normalizedSymbol)) {
+        final priceData = normalizedPrices[normalizedSymbol]!;
+        print(
+          'DEBUG: [Match Success] ${da.asset.symbol} -> Market Price: ${priceData.currentPrice}',
+        );
         return DashboardAsset(
           asset: da.asset,
           holding: da.holding,
-          currentPrice: price,
+          currentPrice: priceData.currentPrice,
+          previousClose: priceData.previousClose,
+          dividendAmount: da.dividendAmount,
+          dividendMonths: da.dividendMonths,
+        );
+      } else if (da.currentPrice == 0.0) {
+        print(
+          'DEBUG: [Match Fallback] ${da.asset.symbol} -> Using Avg Price: ${da.holding.averagePrice}',
+        );
+        return DashboardAsset(
+          asset: da.asset,
+          holding: da.holding,
+          currentPrice: da.holding.averagePrice,
+          previousClose: da.holding.averagePrice,
           dividendAmount: da.dividendAmount,
           dividendMonths: da.dividendMonths,
         );
@@ -174,16 +206,37 @@ class DashboardViewModel extends _$DashboardViewModel {
       return da;
     }).toList();
 
+    final fetchableAssets = newAssets
+        .where(
+          (e) =>
+              e.asset.type != AssetType.deposit &&
+              !e.asset.symbol.startsWith('MANUAL_'),
+        )
+        .toList();
+
+    final sortedByChange = List<DashboardAsset>.from(fetchableAssets)
+      ..sort((a, b) => b.priceChangePercent.compareTo(a.priceChangePercent));
+
+    final topGainers = sortedByChange
+        .where((e) => e.priceChangePercent > 0)
+        .take(3)
+        .toList();
+    final topLosers = sortedByChange.reversed
+        .where((e) => e.priceChangePercent < 0)
+        .take(3)
+        .toList();
+
     state = AsyncData(
       DashboardState(
         totalValue: _calculateTotal(newAssets, currentState.exchangeRate),
         assets: _applySort(newAssets),
         exchangeRate: currentState.exchangeRate,
+        topGainers: topGainers,
+        topLosers: topLosers,
       ),
     );
   }
 
-  // New method to fetch and update dividends for all assets
   Future<void> updateAllDividends() async {
     final stockService = ref.read(stockServiceProvider);
     final repo = ref.read(assetRepositoryProvider);
@@ -196,7 +249,6 @@ class DashboardViewModel extends _$DashboardViewModel {
       final divInfo = await stockService.getDividendInfo(da.asset.symbol);
       if (divInfo != null) {
         final monthsStr = divInfo.months?.join(',');
-        // Update DB via Repository
         await repo.updateDividend(
           assetId: da.asset.id,
           amount: divInfo.annualAmount,
@@ -204,7 +256,6 @@ class DashboardViewModel extends _$DashboardViewModel {
         );
       }
     }
-    // Final refresh to get all data updated
     ref.invalidateSelf();
   }
 }

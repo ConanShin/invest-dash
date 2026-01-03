@@ -7,10 +7,15 @@ class AssetList extends StatelessWidget {
   final List<DashboardAsset> assets;
   final double exchangeRate;
 
+  final bool shrinkWrap;
+  final ScrollPhysics? physics;
+
   const AssetList({
     super.key,
     required this.assets,
     required this.exchangeRate,
+    this.shrinkWrap = false,
+    this.physics,
   });
 
   @override
@@ -43,7 +48,9 @@ class AssetList extends StatelessWidget {
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.only(bottom: 100), // Space for FAB if any
+      shrinkWrap: shrinkWrap,
+      physics: physics,
+      padding: const EdgeInsets.only(bottom: 100),
       itemCount: listItems.length,
       itemBuilder: (context, index) {
         return listItems[index];

@@ -44,10 +44,15 @@ class _MainScreenState extends State<MainScreen> {
           showUnselectedLabels: true,
           items: const [
             BottomNavigationBarItem(
-              icon: Icon(Icons.account_balance_wallet),
-              label: '포트폴리오',
+              icon: Icon(Icons.home_outlined),
+              activeIcon: Icon(Icons.home),
+              label: '홈',
             ),
-            BottomNavigationBarItem(icon: Icon(Icons.pie_chart), label: '그래프'),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.pie_chart_outline),
+              activeIcon: Icon(Icons.pie_chart),
+              label: '자산',
+            ),
             BottomNavigationBarItem(
               icon: Icon(Icons.monetization_on),
               label: '배당금',

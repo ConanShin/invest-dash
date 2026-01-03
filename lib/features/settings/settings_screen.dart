@@ -14,26 +14,43 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      appBar: AppBar(title: const Text('설정')),
-      body: ListView(
-        children: [
-          _buildSectionHeader('데이터 관리'),
-          ListTile(
-            leading: const Icon(Icons.file_upload),
-            title: const Text('데이터 내보내기 (Export)'),
-            subtitle: const Text('현재 자산 데이터를 JSON 파일로 저장하거나 공유합니다.'),
-            onTap: () => _exportData(context, ref),
-          ),
-          ListTile(
-            leading: const Icon(Icons.file_download),
-            title: const Text('데이터 가져오기 (Import)'),
-            subtitle: const Text('기존에 내보낸 JSON 파일에서 데이터를 복원합니다.'),
-            onTap: () => _importData(context, ref),
-          ),
-          const Divider(),
-          _buildSectionHeader('앱 정보'),
-          const ListTile(title: Text('버전'), trailing: Text('1.0.0')),
-        ],
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          children: [
+            const Text(
+              '설정',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -1,
+              ),
+            ),
+            const SizedBox(height: 24),
+            _buildSectionHeader('데이터 관리'),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.file_upload),
+              title: const Text('데이터 내보내기 (Export)'),
+              subtitle: const Text('현재 자산 데이터를 JSON 파일로 저장하거나 공유합니다.'),
+              onTap: () => _exportData(context, ref),
+            ),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.file_download),
+              title: const Text('데이터 가져오기 (Import)'),
+              subtitle: const Text('기존에 내보낸 JSON 파일에서 데이터를 복원합니다.'),
+              onTap: () => _importData(context, ref),
+            ),
+            const Divider(height: 48),
+            _buildSectionHeader('앱 정보'),
+            const ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text('버전'),
+              trailing: Text('1.0.0'),
+            ),
+          ],
+        ),
       ),
     );
   }

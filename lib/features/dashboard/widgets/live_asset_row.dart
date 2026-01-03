@@ -64,7 +64,21 @@ class _LiveAssetRowState extends ConsumerState<LiveAssetRow> {
 
     final profit = currentVal - investment;
     final profitPercent = investment == 0 ? 0.0 : (profit / investment) * 100;
-    final isProfit = profit >= 0;
+
+    // Determine status color and prefix
+    final Color statusColor;
+    final String statusPrefix;
+
+    if (profit > 0.01) {
+      statusColor = Colors.red[700]!;
+      statusPrefix = '▲';
+    } else if (profit < -0.01) {
+      statusColor = Colors.blue[700]!;
+      statusPrefix = '▼';
+    } else {
+      statusColor = Colors.grey[600]!;
+      statusPrefix = '';
+    }
 
     // Determine currency symbol
     final isUsd = widget.assetItem.asset.currency == 'USD';
@@ -137,18 +151,30 @@ class _LiveAssetRowState extends ConsumerState<LiveAssetRow> {
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color: (isProfit ? Colors.red : Colors.blue).withAlpha(
-                        30,
-                      ),
+                      color: statusColor.withAlpha(30),
                       borderRadius: BorderRadius.circular(4),
                     ),
-                    child: Text(
-                      '${isProfit ? '▲' : '▼'} ${profitPercent.abs().toStringAsFixed(1)}%',
-                      style: TextStyle(
-                        color: isProfit ? Colors.red[700] : Colors.blue[700],
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (statusPrefix.isNotEmpty)
+                          Text(
+                            statusPrefix,
+                            style: TextStyle(
+                              color: statusColor,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        Text(
+                          '${statusPrefix.isNotEmpty ? " " : ""}${profitPercent.abs().toStringAsFixed(1)}%',
+                          style: TextStyle(
+                            color: statusColor,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],

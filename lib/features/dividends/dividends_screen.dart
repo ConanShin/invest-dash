@@ -15,74 +15,89 @@ class DividendsScreen extends ConsumerWidget {
     );
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('월별 예상 배당금'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => ref
-                .read(dashboardViewModelProvider.notifier)
-                .updateAllDividends(),
-            tooltip: '배당 정보 업데이트',
-          ),
-        ],
-      ),
-      body: dashboardAsync.when(
-        data: (state) {
-          final monthlyDividends = _calculateMonthlyDividends(
-            state.assets,
-            state.exchangeRate,
-          );
-          final annualTotal = monthlyDividends.values.fold(
-            0.0,
-            (sum, val) => sum + val,
-          );
+      body: SafeArea(
+        child: dashboardAsync.when(
+          data: (state) {
+            final monthlyDividends = _calculateMonthlyDividends(
+              state.assets,
+              state.exchangeRate,
+            );
+            final annualTotal = monthlyDividends.values.fold(
+              0.0,
+              (sum, val) => sum + val,
+            );
 
-          if (annualTotal == 0) {
-            return Center(
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(20.0),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Icon(Icons.info_outline, size: 64, color: Colors.grey),
-                  const SizedBox(height: 16),
-                  const Text('배당 정보가 없거나 자산이 없습니다.'),
-                  const SizedBox(height: 8),
-                  ElevatedButton(
-                    onPressed: () => ref
-                        .read(dashboardViewModelProvider.notifier)
-                        .updateAllDividends(),
-                    child: const Text('배당 정보 불러오기'),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        '배당 현황',
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -1,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.refresh),
+                        onPressed: () => ref
+                            .read(dashboardViewModelProvider.notifier)
+                            .updateAllDividends(),
+                        tooltip: '배당 정보 업데이트',
+                      ),
+                    ],
                   ),
+                  const SizedBox(height: 24),
+                  if (annualTotal == 0) ...[
+                    const SizedBox(height: 60),
+                    const Icon(
+                      Icons.info_outline,
+                      size: 64,
+                      color: Colors.grey,
+                    ),
+                    const SizedBox(height: 16),
+                    const Center(child: Text('배당 정보가 없거나 자산이 없습니다.')),
+                    const SizedBox(height: 8),
+                    Center(
+                      child: ElevatedButton(
+                        onPressed: () => ref
+                            .read(dashboardViewModelProvider.notifier)
+                            .updateAllDividends(),
+                        child: const Text('배당 정보 불러오기'),
+                      ),
+                    ),
+                  ] else ...[
+                    _buildSummaryCard(annualTotal, currencyFormatter),
+                    const SizedBox(height: 32),
+                    const Text(
+                      '월별 배당금 추정치',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildMonthlyList(monthlyDividends, currencyFormatter),
+                    const SizedBox(height: 32),
+                    _buildAssetDividendList(
+                      state.assets,
+                      state.exchangeRate,
+                      currencyFormatter,
+                    ),
+                  ],
                 ],
               ),
             );
-          }
-
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildSummaryCard(annualTotal, currencyFormatter),
-                const SizedBox(height: 24),
-                const Text(
-                  '월별 배당금 추정치',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 16),
-                _buildMonthlyList(monthlyDividends, currencyFormatter),
-                const SizedBox(height: 24),
-                _buildAssetDividendList(
-                  state.assets,
-                  state.exchangeRate,
-                  currencyFormatter,
-                ),
-              ],
-            ),
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, stack) => Center(child: Text('Error: $err')),
+        ),
       ),
     );
   }

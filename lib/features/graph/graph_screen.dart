@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../dashboard/dashboard_view_model.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../data/local/database.dart';
+import '../dashboard/widgets/asset_list.dart';
+import '../portfolio/add_asset_screen.dart';
 
 class GraphScreen extends ConsumerWidget {
   const GraphScreen({super.key});
@@ -12,63 +14,175 @@ class GraphScreen extends ConsumerWidget {
     final dashboardAsync = ref.watch(dashboardViewModelProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('자산 비중')),
-      body: dashboardAsync.when(
-        data: (state) {
-          if (state.assets.isEmpty) {
-            return const Center(child: Text('표시할 데이터가 없습니다.'));
-          }
+      body: SafeArea(
+        child: dashboardAsync.when(
+          data: (state) {
+            if (state.assets.isEmpty) {
+              return const Center(child: Text('표시할 데이터가 없습니다.'));
+            }
 
-          final data = _calculateTypeRatio(state.assets, state.exchangeRate);
+            final data = _calculateTypeRatio(state.assets, state.exchangeRate);
 
-          return Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              children: [
-                const SizedBox(height: 20),
-                SizedBox(
-                  height: 300,
-                  child: PieChart(
-                    PieChartData(
-                      sections: data.entries.map((e) {
-                        return PieChartSectionData(
-                          value: e.value,
-                          title:
-                              '${_getTypeName(e.key)}\n${e.value.toStringAsFixed(1)}%',
-                          radius: 100,
-                          titleStyle: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
+            return SingleChildScrollView(
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 24,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          '나의 자산',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -1,
                           ),
-                          color: _getColorForType(e.key),
-                        );
-                      }).toList(),
-                      centerSpaceRadius: 40,
-                      sectionsSpace: 2,
+                        ),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).primaryColor.withAlpha(20),
+                            shape: BoxShape.circle,
+                          ),
+                          child: IconButton(
+                            icon: Icon(
+                              Icons.add,
+                              color: Theme.of(context).primaryColor,
+                            ),
+                            onPressed: () {
+                              showModalBottomSheet(
+                                context: context,
+                                isScrollControlled: true,
+                                useSafeArea: true,
+                                shape: const RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.vertical(
+                                    top: Radius.circular(32),
+                                  ),
+                                ),
+                                builder: (context) => const AddAssetScreen(),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ),
-                const SizedBox(height: 40),
-                Expanded(
-                  child: ListView(
-                    children: data.entries.map((e) {
-                      return ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: _getColorForType(e.key),
-                        ),
-                        title: Text(_getTypeName(e.key)),
-                        trailing: Text('${e.value.toStringAsFixed(1)}%'),
-                      );
-                    }).toList(),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.03),
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          // Pie Chart on the left
+                          Expanded(
+                            flex: 4,
+                            child: SizedBox(
+                              height: 150,
+                              child: PieChart(
+                                PieChartData(
+                                  sections: data.entries.map((e) {
+                                    return PieChartSectionData(
+                                      value: e.value,
+                                      title: e.value > 15
+                                          ? '${e.value.toStringAsFixed(0)}%'
+                                          : '',
+                                      radius: 40,
+                                      titleStyle: const TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                      color: _getColorForType(e.key),
+                                    );
+                                  }).toList(),
+                                  centerSpaceRadius: 25,
+                                  sectionsSpace: 2,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 24),
+                          // Vertical Legend on the right
+                          Expanded(
+                            flex: 5,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                ...data.entries.map((e) {
+                                  return Padding(
+                                    padding: const EdgeInsets.only(
+                                      bottom: 10.0,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          width: 8,
+                                          height: 8,
+                                          decoration: BoxDecoration(
+                                            color: _getColorForType(e.key),
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            _getTypeName(e.key),
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey[700],
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        Text(
+                                          '${e.value.toStringAsFixed(1)}%',
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w900,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }).toList(),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
-              ],
-            ),
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, s) => Center(child: Text('Error: $e')),
+                  const Divider(height: 1),
+                  AssetList(
+                    assets: state.assets,
+                    exchangeRate: state.exchangeRate,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                  ),
+                ],
+              ),
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, s) => Center(child: Text('Error: $e')),
+        ),
       ),
     );
   }
