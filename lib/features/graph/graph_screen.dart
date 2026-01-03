@@ -18,7 +18,54 @@ class GraphScreen extends ConsumerWidget {
         child: dashboardAsync.when(
           data: (state) {
             if (state.assets.isEmpty) {
-              return const Center(child: Text('표시할 데이터가 없습니다.'));
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.pie_chart_outline,
+                      size: 80,
+                      color: Theme.of(context).primaryColor.withAlpha(50),
+                    ),
+                    const SizedBox(height: 24),
+                    const Text(
+                      '등록된 자산이 없습니다',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          useSafeArea: true,
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.vertical(
+                              top: Radius.circular(32),
+                            ),
+                          ),
+                          builder: (context) => const AddAssetScreen(),
+                        );
+                      },
+                      icon: const Icon(Icons.add),
+                      label: const Text('첫 자산 등록하기'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 32,
+                          vertical: 16,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
             }
 
             final data = _calculateTypeRatio(state.assets, state.exchangeRate);

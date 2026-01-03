@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../dashboard_view_model.dart';
 import '../../../data/local/database.dart';
+import '../../portfolio/add_asset_screen.dart';
 
 class CompactAssetList extends StatelessWidget {
   final List<DashboardAsset> assets;
@@ -15,7 +16,59 @@ class CompactAssetList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (assets.isEmpty) {
-      return const Center(child: Text('보유 자산이 없습니다.'));
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        child: Column(
+          children: [
+            InkWell(
+              onTap: () {
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  useSafeArea: true,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(32),
+                    ),
+                  ),
+                  builder: (context) => const AddAssetScreen(),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).primaryColor.withAlpha(15),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: Theme.of(context).primaryColor.withAlpha(30),
+                    width: 2,
+                  ),
+                ),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.add_circle_outline,
+                        color: Theme.of(context).primaryColor,
+                        size: 32,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '새로운 자산을 등록해보세요',
+                        style: TextStyle(
+                          color: Theme.of(context).primaryColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
     }
 
     // Sort by value and take top 5
