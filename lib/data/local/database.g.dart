@@ -3,6 +3,191 @@
 part of 'database.dart';
 
 // ignore_for_file: type=lint
+class $OwnersTable extends Owners with TableInfo<$OwnersTable, Owner> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $OwnersTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, name];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'owners';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<Owner> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Owner map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Owner(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+    );
+  }
+
+  @override
+  $OwnersTable createAlias(String alias) {
+    return $OwnersTable(attachedDatabase, alias);
+  }
+}
+
+class Owner extends DataClass implements Insertable<Owner> {
+  final int id;
+  final String name;
+  const Owner({required this.id, required this.name});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['name'] = Variable<String>(name);
+    return map;
+  }
+
+  OwnersCompanion toCompanion(bool nullToAbsent) {
+    return OwnersCompanion(id: Value(id), name: Value(name));
+  }
+
+  factory Owner.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Owner(
+      id: serializer.fromJson<int>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'name': serializer.toJson<String>(name),
+    };
+  }
+
+  Owner copyWith({int? id, String? name}) =>
+      Owner(id: id ?? this.id, name: name ?? this.name);
+  Owner copyWithCompanion(OwnersCompanion data) {
+    return Owner(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Owner(')
+          ..write('id: $id, ')
+          ..write('name: $name')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, name);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Owner && other.id == this.id && other.name == this.name);
+}
+
+class OwnersCompanion extends UpdateCompanion<Owner> {
+  final Value<int> id;
+  final Value<String> name;
+  const OwnersCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+  });
+  OwnersCompanion.insert({this.id = const Value.absent(), required String name})
+    : name = Value(name);
+  static Insertable<Owner> custom({
+    Expression<int>? id,
+    Expression<String>? name,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+    });
+  }
+
+  OwnersCompanion copyWith({Value<int>? id, Value<String>? name}) {
+    return OwnersCompanion(id: id ?? this.id, name: name ?? this.name);
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('OwnersCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $AssetsTable extends Assets with TableInfo<$AssetsTable, Asset> {
   @override
   final GeneratedDatabase attachedDatabase;
@@ -825,15 +1010,137 @@ class HoldingsCompanion extends UpdateCompanion<Holding> {
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
+  late final $OwnersTable owners = $OwnersTable(this);
   late final $AssetsTable assets = $AssetsTable(this);
   late final $HoldingsTable holdings = $HoldingsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
-  List<DatabaseSchemaEntity> get allSchemaEntities => [assets, holdings];
+  List<DatabaseSchemaEntity> get allSchemaEntities => [
+    owners,
+    assets,
+    holdings,
+  ];
 }
 
+typedef $$OwnersTableCreateCompanionBuilder =
+    OwnersCompanion Function({Value<int> id, required String name});
+typedef $$OwnersTableUpdateCompanionBuilder =
+    OwnersCompanion Function({Value<int> id, Value<String> name});
+
+class $$OwnersTableFilterComposer
+    extends Composer<_$AppDatabase, $OwnersTable> {
+  $$OwnersTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$OwnersTableOrderingComposer
+    extends Composer<_$AppDatabase, $OwnersTable> {
+  $$OwnersTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$OwnersTableAnnotationComposer
+    extends Composer<_$AppDatabase, $OwnersTable> {
+  $$OwnersTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+}
+
+class $$OwnersTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $OwnersTable,
+          Owner,
+          $$OwnersTableFilterComposer,
+          $$OwnersTableOrderingComposer,
+          $$OwnersTableAnnotationComposer,
+          $$OwnersTableCreateCompanionBuilder,
+          $$OwnersTableUpdateCompanionBuilder,
+          (Owner, BaseReferences<_$AppDatabase, $OwnersTable, Owner>),
+          Owner,
+          PrefetchHooks Function()
+        > {
+  $$OwnersTableTableManager(_$AppDatabase db, $OwnersTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$OwnersTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$OwnersTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$OwnersTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+              }) => OwnersCompanion(id: id, name: name),
+          createCompanionCallback:
+              ({Value<int> id = const Value.absent(), required String name}) =>
+                  OwnersCompanion.insert(id: id, name: name),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$OwnersTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $OwnersTable,
+      Owner,
+      $$OwnersTableFilterComposer,
+      $$OwnersTableOrderingComposer,
+      $$OwnersTableAnnotationComposer,
+      $$OwnersTableCreateCompanionBuilder,
+      $$OwnersTableUpdateCompanionBuilder,
+      (Owner, BaseReferences<_$AppDatabase, $OwnersTable, Owner>),
+      Owner,
+      PrefetchHooks Function()
+    >;
 typedef $$AssetsTableCreateCompanionBuilder =
     AssetsCompanion Function({
       Value<int> id,
@@ -1481,6 +1788,8 @@ typedef $$HoldingsTableProcessedTableManager =
 class $AppDatabaseManager {
   final _$AppDatabase _db;
   $AppDatabaseManager(this._db);
+  $$OwnersTableTableManager get owners =>
+      $$OwnersTableTableManager(_db, _db.owners);
   $$AssetsTableTableManager get assets =>
       $$AssetsTableTableManager(_db, _db.assets);
   $$HoldingsTableTableManager get holdings =>

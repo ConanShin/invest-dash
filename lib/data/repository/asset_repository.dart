@@ -24,6 +24,55 @@ class AssetRepository {
     }).toList();
   }
 
+  // Get all owners
+  Future<List<Owner>> getAllOwners() async {
+    return _db.select(_db.owners).get();
+  }
+
+  // Add new owner
+  Future<int> addOwner(String name) async {
+    return _db.into(_db.owners).insert(OwnersCompanion(name: Value(name)));
+  }
+
+  // Update owner name
+  Future<void> updateOwner(int id, String newName) async {
+    await _db.transaction(() async {
+      final oldOwner = await (_db.select(
+        _db.owners,
+      )..where((t) => t.id.equals(id))).getSingle();
+
+      // Update assets first to maintain "consistency" (even if not strictly FK-tied yet)
+      await (_db.update(_db.assets)
+            ..where((t) => t.owner.equals(oldOwner.name)))
+          .write(AssetsCompanion(owner: Value(newName)));
+
+      // Update owner table
+      await (_db.update(_db.owners)..where((t) => t.id.equals(id))).write(
+        OwnersCompanion(name: Value(newName)),
+      );
+    });
+  }
+
+  // Delete owner
+  Future<void> deleteOwner(int id) async {
+    await _db.transaction(() async {
+      final owner = await (_db.select(
+        _db.owners,
+      )..where((t) => t.id.equals(id))).getSingle();
+
+      // Delete assets first
+      final assetsToDelete = await (_db.select(
+        _db.assets,
+      )..where((t) => t.owner.equals(owner.name))).get();
+      for (var asset in assetsToDelete) {
+        await deleteAsset(asset.id);
+      }
+
+      // Delete owner
+      await (_db.delete(_db.owners)..where((t) => t.id.equals(id))).go();
+    });
+  }
+
   // Add new asset and holding
   Future<void> addAsset({
     required String symbol,
@@ -128,14 +177,24 @@ class AssetRepository {
   }
 
   // Replace all data with imported data
-  Future<void> replaceAllData(List<dynamic> data) async {
+  Future<void> replaceAllData(Map<String, dynamic> data) async {
     await _db.transaction(() async {
       // 1. Clear existing data
       await _db.delete(_db.holdings).go();
       await _db.delete(_db.assets).go();
+      await _db.delete(_db.owners).go();
 
-      // 2. Insert new data
-      for (var item in data) {
+      // 2. Insert owners
+      final List<dynamic> ownerList = data['owners'] ?? [];
+      for (var ownerName in ownerList) {
+        await _db
+            .into(_db.owners)
+            .insert(OwnersCompanion(name: Value(ownerName as String)));
+      }
+
+      // 3. Insert assets and holdings
+      final List<dynamic> assetList = data['assets'] ?? [];
+      for (var item in assetList) {
         final assetJson = item['asset'];
         final holdingJson = item['holding'];
 

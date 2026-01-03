@@ -11,6 +11,11 @@ AppDatabase appDatabase(Ref ref) {
 
 @riverpod
 AssetRepository assetRepository(Ref ref) {
-  final db = ref.watch(appDatabaseProvider);
-  return AssetRepository(db);
+  return AssetRepository(ref.watch(appDatabaseProvider));
+}
+
+@riverpod
+Future<List<dynamic>> owners(Ref ref) async {
+  // Using dynamic to avoid build_runner type resolution issues with generated drift classes
+  return ref.watch(assetRepositoryProvider).getAllOwners();
 }

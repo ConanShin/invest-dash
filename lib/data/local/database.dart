@@ -15,6 +15,11 @@ enum AssetType {
   fund, // Private Fund
 }
 
+class Owners extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get name => text().unique()(); // Owner name must be unique
+}
+
 class Assets extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get symbol => text()(); // e.g., AAPL, 005930
@@ -34,12 +39,12 @@ class Holdings extends Table {
   RealColumn get averagePrice => real()();
 }
 
-@DriftDatabase(tables: [Assets, Holdings])
+@DriftDatabase(tables: [Owners, Assets, Holdings])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration {
@@ -58,6 +63,17 @@ class AppDatabase extends _$AppDatabase {
           await m.addColumn(assets, assets.dividendAmount);
           await m.addColumn(assets, assets.dividendMonths);
         }
+        if (from < 5) {
+          await m.createTable(owners);
+          // Pre-populate owners from existing assets
+          await customStatement('''
+            INSERT OR IGNORE INTO owners (name)
+            SELECT DISTINCT owner FROM assets;
+          ''');
+        }
+      },
+      beforeOpen: (details) async {
+        await customStatement('PRAGMA foreign_keys = ON');
       },
     );
   }

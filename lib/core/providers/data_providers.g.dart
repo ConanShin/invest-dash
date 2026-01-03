@@ -90,4 +90,43 @@ final class AssetRepositoryProvider
   }
 }
 
-String _$assetRepositoryHash() => r'e769dbb75049d360f922e448784d5dc3ade75709';
+String _$assetRepositoryHash() => r'7ab42c49c2e61209e4d90bbebfc02b52c70dbfe3';
+
+@ProviderFor(owners)
+final ownersProvider = OwnersProvider._();
+
+final class OwnersProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<List<dynamic>>,
+          List<dynamic>,
+          FutureOr<List<dynamic>>
+        >
+    with $FutureModifier<List<dynamic>>, $FutureProvider<List<dynamic>> {
+  OwnersProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'ownersProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$ownersHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<List<dynamic>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<List<dynamic>> create(Ref ref) {
+    return owners(ref);
+  }
+}
+
+String _$ownersHash() => r'af9382f0ee8330298f7a31115a2953c4de377fa4';

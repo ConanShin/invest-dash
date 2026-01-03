@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../core/providers/data_providers.dart';
 import '../../features/dashboard/dashboard_view_model.dart';
+import 'owner_management_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -27,6 +28,21 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 24),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.person_outline),
+              title: const Text('소유자 관리'),
+              subtitle: const Text('자산 소유자를 등록하거나 수정합니다.'),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const OwnerManagementScreen(),
+                  ),
+                );
+              },
+            ),
+            const Divider(height: 48),
             _buildSectionHeader('데이터 관리'),
             ListTile(
               contentPadding: EdgeInsets.zero,
@@ -73,25 +89,31 @@ class SettingsScreen extends ConsumerWidget {
     try {
       final repo = ref.read(assetRepositoryProvider);
       final assets = await repo.getAllAssets();
+      final owners = await repo.getAllOwners();
 
-      // Simplify for export; we'll need to store both Assets and Holdings
-      final data = assets
-          .map(
-            (a) => {
-              'asset': {
-                'symbol': a.asset.symbol,
-                'name': a.asset.name,
-                'type': a.asset.type.name,
-                'currency': a.asset.currency,
-                'owner': a.asset.owner,
+      // Simplified for export; we'll need to store both Assets and Holdings
+      final data = {
+        'owners': owners.map((o) => o.name).toList(),
+        'assets': assets
+            .map(
+              (a) => {
+                'asset': {
+                  'symbol': a.asset.symbol,
+                  'name': a.asset.name,
+                  'type': a.asset.type.name,
+                  'currency': a.asset.currency,
+                  'owner': a.asset.owner,
+                  'dividendAmount': a.asset.dividendAmount,
+                  'dividendMonths': a.asset.dividendMonths,
+                },
+                'holding': {
+                  'quantity': a.holding.quantity,
+                  'averagePrice': a.holding.averagePrice,
+                },
               },
-              'holding': {
-                'quantity': a.holding.quantity,
-                'averagePrice': a.holding.averagePrice,
-              },
-            },
-          )
-          .toList();
+            )
+            .toList(),
+      };
 
       final jsonString = const JsonEncoder.withIndent('  ').convert(data);
       final directory = await getTemporaryDirectory();
@@ -118,7 +140,7 @@ class SettingsScreen extends ConsumerWidget {
       if (result != null) {
         final file = File(result.files.single.path!);
         final jsonString = await file.readAsString();
-        final List<dynamic> data = jsonDecode(jsonString);
+        final Map<String, dynamic> data = jsonDecode(jsonString);
 
         final repo = ref.read(assetRepositoryProvider);
 

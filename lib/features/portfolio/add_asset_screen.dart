@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/providers/data_providers.dart';
 import '../../data/local/database.dart';
 import 'add_asset_view_model.dart';
 import '../dashboard/dashboard_view_model.dart'
@@ -396,17 +397,30 @@ class _AddAssetScreenState extends ConsumerState<AddAssetScreen> {
               children: [
                 Expanded(
                   flex: 3,
-                  child: DropdownButtonFormField<String>(
-                    value: _owner,
-                    decoration: _inputDecoration(
-                      label: '소유자',
-                      icon: Icons.person_outline,
-                    ),
-                    items: ['신철민', '채지선', '신비']
-                        .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                        .toList(),
-                    onChanged: (val) => setState(() => _owner = val!),
-                  ),
+                  child: ref
+                      .watch(ownersProvider)
+                      .when(
+                        data: (owners) => DropdownButtonFormField<String>(
+                          value: owners.any((o) => o.name == _owner)
+                              ? _owner
+                              : (owners.isNotEmpty ? owners.first.name : null),
+                          decoration: _inputDecoration(
+                            label: '소유자',
+                            icon: Icons.person_outline,
+                          ),
+                          items: owners
+                              .map(
+                                (o) => DropdownMenuItem(
+                                  value: o.name as String,
+                                  child: Text(o.name as String),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (val) => setState(() => _owner = val!),
+                        ),
+                        loading: () => const LinearProgressIndicator(),
+                        error: (_, __) => const Text('Error'),
+                      ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
