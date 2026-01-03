@@ -13,7 +13,7 @@ class InvestDashApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Invest Dash',
+      title: '인베스트 대시',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
