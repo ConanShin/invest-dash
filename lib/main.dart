@@ -5,6 +5,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'features/main_screen.dart';
 import 'features/portfolio/add_asset_screen.dart';
+import 'features/splash/splash_screen.dart';
 import 'core/providers/data_providers.dart';
 
 void main() async {
@@ -90,9 +91,10 @@ class InvestDashApp extends ConsumerWidget {
         ),
       ),
       themeMode: themeMode,
-      initialRoute: '/',
+      initialRoute: '/splash',
       routes: {
         '/': (context) => const MainScreen(),
+        '/splash': (context) => const SplashScreen(),
         '/add_asset': (context) => const AddAssetScreen(),
       },
     );
