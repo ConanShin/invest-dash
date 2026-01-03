@@ -126,6 +126,53 @@ class AssetRepository {
       await (_db.delete(_db.assets)..where((t) => t.id.equals(assetId))).go();
     });
   }
+
+  // Replace all data with imported data
+  Future<void> replaceAllData(List<dynamic> data) async {
+    await _db.transaction(() async {
+      // 1. Clear existing data
+      await _db.delete(_db.holdings).go();
+      await _db.delete(_db.assets).go();
+
+      // 2. Insert new data
+      for (var item in data) {
+        final assetJson = item['asset'];
+        final holdingJson = item['holding'];
+
+        final typeName = assetJson['type'] as String;
+        final type = AssetType.values.firstWhere(
+          (e) => e.name == typeName,
+          orElse: () => AssetType.domesticStock,
+        );
+
+        final assetId = await _db
+            .into(_db.assets)
+            .insert(
+              AssetsCompanion(
+                symbol: Value(assetJson['symbol']),
+                name: Value(assetJson['name']),
+                type: Value(type),
+                currency: Value(assetJson['currency']),
+                owner: Value(assetJson['owner']),
+                dividendAmount: Value(assetJson['dividendAmount']?.toDouble()),
+                dividendMonths: Value(assetJson['dividendMonths']),
+              ),
+            );
+
+        await _db
+            .into(_db.holdings)
+            .insert(
+              HoldingsCompanion(
+                assetId: Value(assetId),
+                quantity: Value((holdingJson['quantity'] as num).toDouble()),
+                averagePrice: Value(
+                  (holdingJson['averagePrice'] as num).toDouble(),
+                ),
+              ),
+            );
+      }
+    });
+  }
 }
 
 class AssetWithHolding {

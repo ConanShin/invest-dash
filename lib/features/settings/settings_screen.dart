@@ -125,14 +125,21 @@ class SettingsScreen extends ConsumerWidget {
         );
 
         if (confirm == true) {
-          // Note: This requires a method to clear and batch insert in Repository/Database
-          // For now, let's assume we implement it or doing it one by one (less efficient)
-          for (var item in data) {
-            final asset = item['asset'];
-            final holding = item['holding'];
+          // Show loading indicator
+          if (context.mounted) {
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (context) =>
+                  const Center(child: CircularProgressIndicator()),
+            );
+          }
 
-            // This is a bit simplified; real implementation should be in Repository
-            // We'll skip the actual DB implementation for now until repo is ready
+          await repo.replaceAllData(data);
+
+          // Close loading indicator
+          if (context.mounted) {
+            Navigator.pop(context);
           }
 
           ref.invalidate(dashboardViewModelProvider);
