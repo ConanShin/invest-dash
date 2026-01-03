@@ -37,10 +37,18 @@ class CompactAssetList extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 20),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor.withAlpha(15),
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Theme.of(
+                          context,
+                        ).colorScheme.primary.withValues(alpha: 0.1)
+                      : Theme.of(context).primaryColor.withAlpha(15),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: Theme.of(context).primaryColor.withAlpha(30),
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Theme.of(
+                            context,
+                          ).colorScheme.primary.withValues(alpha: 0.2)
+                        : Theme.of(context).primaryColor.withAlpha(30),
                     width: 2,
                   ),
                 ),
@@ -49,14 +57,18 @@ class CompactAssetList extends StatelessWidget {
                     children: [
                       Icon(
                         Icons.add_circle_outline,
-                        color: Theme.of(context).primaryColor,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Theme.of(context).colorScheme.primary
+                            : Theme.of(context).primaryColor,
                         size: 32,
                       ),
                       const SizedBox(height: 8),
                       Text(
                         '새로운 자산을 등록해보세요',
                         style: TextStyle(
-                          color: Theme.of(context).primaryColor,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(context).primaryColor,
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
                         ),

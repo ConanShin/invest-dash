@@ -12,12 +12,7 @@ class OwnerManagementScreen extends ConsumerWidget {
     final ownersAsync = ref.watch(ownersProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('소유자 관리'),
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.black,
-      ),
+      appBar: AppBar(title: const Text('소유자 관리')),
       body: ownersAsync.when(
         data: (owners) => ListView.builder(
           padding: const EdgeInsets.all(20),

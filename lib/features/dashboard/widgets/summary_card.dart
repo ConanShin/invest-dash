@@ -19,8 +19,8 @@ class SummaryCard extends ConsumerWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            Theme.of(context).primaryColor,
-            Theme.of(context).primaryColor.withAlpha(180),
+            Theme.of(context).colorScheme.primary,
+            Theme.of(context).colorScheme.primary.withValues(alpha: 0.8),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -60,21 +60,24 @@ class SummaryCard extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
-                TweenAnimationBuilder<double>(
-                  tween: Tween<double>(begin: 0, end: totalValue),
-                  duration: const Duration(milliseconds: 1000),
-                  curve: Curves.easeOutQuint,
-                  builder: (context, value, child) {
-                    return Text(
-                      currencyFormatter.format(value),
-                      style: const TextStyle(
-                        fontSize: 36,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                        letterSpacing: -1,
-                      ),
-                    );
-                  },
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween<double>(begin: 0, end: totalValue),
+                    duration: const Duration(milliseconds: 1000),
+                    curve: Curves.easeOutQuint,
+                    builder: (context, value, child) {
+                      return Text(
+                        currencyFormatter.format(value),
+                        style: const TextStyle(
+                          fontSize: 36,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          letterSpacing: -1,
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ],
             ),

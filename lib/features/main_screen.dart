@@ -49,8 +49,11 @@ class _MainScreenState extends ConsumerState<MainScreen> {
               currentIndex: _selectedIndex,
               onTap: (index) => setState(() => _selectedIndex = index),
               type: BottomNavigationBarType.fixed,
-              selectedItemColor: Theme.of(context).primaryColor,
-              unselectedItemColor: Colors.grey,
+              selectedItemColor: Theme.of(context).colorScheme.primary,
+              unselectedItemColor:
+                  Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white.withValues(alpha: 0.4)
+                  : Colors.grey,
               showUnselectedLabels: true,
               items: const [
                 BottomNavigationBarItem(

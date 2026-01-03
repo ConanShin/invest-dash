@@ -43,6 +43,48 @@ class SettingsScreen extends ConsumerWidget {
               },
             ),
             const Divider(height: 48),
+            _buildSectionHeader('앱 설정'),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.palette_outlined),
+              title: const Text('화면 테마'),
+              subtitle: const Text('앱의 화면 테마를 변경합니다.'),
+              trailing: Consumer(
+                builder: (context, ref, _) {
+                  final themeMode = ref.watch(themeModeControllerProvider);
+                  return SegmentedButton<ThemeMode>(
+                    segments: const [
+                      ButtonSegment(
+                        value: ThemeMode.light,
+                        icon: Icon(Icons.light_mode_outlined),
+                        label: Text('라이트'),
+                      ),
+                      ButtonSegment(
+                        value: ThemeMode.dark,
+                        icon: Icon(Icons.dark_mode_outlined),
+                        label: Text('다크'),
+                      ),
+                    ],
+                    selected: {
+                      themeMode == ThemeMode.system
+                          ? ThemeMode.light
+                          : themeMode,
+                    },
+                    onSelectionChanged: (Set<ThemeMode> newSelection) {
+                      ref
+                          .read(themeModeControllerProvider.notifier)
+                          .setThemeMode(newSelection.first);
+                    },
+                    showSelectedIcon: false,
+                    style: SegmentedButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      textStyle: const TextStyle(fontSize: 12),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const Divider(height: 48),
             _buildSectionHeader('데이터 관리'),
             ListTile(
               contentPadding: EdgeInsets.zero,

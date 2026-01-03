@@ -70,7 +70,7 @@ class _AddAssetScreenState extends ConsumerState<AddAssetScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Column(
         children: [
           _buildHeader(),
@@ -110,9 +110,9 @@ class _AddAssetScreenState extends ConsumerState<AddAssetScreen> {
         right: 20,
         bottom: 16,
       ),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(32)),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(32)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -230,7 +230,7 @@ class _AddAssetScreenState extends ConsumerState<AddAssetScreen> {
         ],
       ),
       child: Material(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(24),
         child: InkWell(
           borderRadius: BorderRadius.circular(24),
@@ -302,7 +302,7 @@ class _AddAssetScreenState extends ConsumerState<AddAssetScreen> {
 
     return Container(
       key: key,
-      color: Colors.white,
+      color: Theme.of(context).colorScheme.surface,
       child: Form(
         key: _formKey,
         child: ListView(
@@ -568,18 +568,28 @@ class _AddAssetScreenState extends ConsumerState<AddAssetScreen> {
       floatingLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(color: Colors.grey[200]!),
+        borderSide: BorderSide(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white.withValues(alpha: 0.1)
+              : Colors.grey[200]!,
+        ),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(color: Colors.grey[200]!),
+        borderSide: BorderSide(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white.withValues(alpha: 0.1)
+              : Colors.grey[200]!,
+        ),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 2),
       ),
       filled: true,
-      fillColor: Colors.grey[50],
+      fillColor: Theme.of(context).brightness == Brightness.dark
+          ? Colors.white.withValues(alpha: 0.02)
+          : Colors.grey[50],
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
     );
   }

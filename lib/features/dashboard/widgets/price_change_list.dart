@@ -31,8 +31,13 @@ class PriceChangeList extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.grey[100],
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFF161B22)
+                    : Colors.grey[100],
                 borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: Theme.of(context).dividerColor.withOpacity(0.05),
+                ),
               ),
               child: const Row(
                 children: [

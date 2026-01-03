@@ -26,9 +26,16 @@ class WeatherWidget extends ConsumerWidget {
           margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.blue[50]?.withOpacity(0.5),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFF161B22)
+                : Colors.blue[50]?.withOpacity(0.5),
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Colors.blue[100]!, width: 1),
+            border: Border.all(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white.withValues(alpha: 0.05)
+                  : Colors.blue[100]!,
+              width: 1,
+            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -39,18 +46,25 @@ class WeatherWidget extends ConsumerWidget {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         '오늘의 날씨',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Colors.blueAccent,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.blueAccent[100]
+                              : Colors.blueAccent,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         '서울, 대한민국',
-                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.grey[400]
+                              : Colors.grey[600],
+                        ),
                       ),
                     ],
                   ),
@@ -78,17 +92,20 @@ class WeatherWidget extends ConsumerWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   _buildWeatherItem(
+                    context,
                     label: '최고/최저',
                     value:
                         '${data.tempMax.toInt()}° / ${data.tempMin.toInt()}°',
                     icon: Icons.thermostat,
                   ),
                   _buildWeatherItem(
+                    context,
                     label: '강수량',
                     value: '${data.precipitation.toStringAsFixed(1)}mm',
                     icon: Icons.water_drop,
                   ),
                   _buildWeatherItem(
+                    context,
                     label: '미세먼지',
                     value: _getDustLevel(data.pm10),
                     icon: Icons.air,
@@ -102,14 +119,21 @@ class WeatherWidget extends ConsumerWidget {
     );
   }
 
-  Widget _buildWeatherItem({
+  Widget _buildWeatherItem(
+    BuildContext context, {
     required String label,
     required String value,
     required IconData icon,
   }) {
     return Column(
       children: [
-        Icon(icon, size: 18, color: Colors.blue[300]),
+        Icon(
+          icon,
+          size: 18,
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.blue[200]
+              : Colors.blue[300],
+        ),
         const SizedBox(height: 4),
         Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
         const SizedBox(height: 2),

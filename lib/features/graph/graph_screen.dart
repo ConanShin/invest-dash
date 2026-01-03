@@ -25,7 +25,13 @@ class GraphScreen extends ConsumerWidget {
                     Icon(
                       Icons.pie_chart_outline,
                       size: 80,
-                      color: Theme.of(context).primaryColor.withAlpha(50),
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Theme.of(
+                              context,
+                            ).colorScheme.primary.withValues(alpha: 0.3)
+                          : Theme.of(
+                              context,
+                            ).primaryColor.withValues(alpha: 0.2),
                     ),
                     const SizedBox(height: 24),
                     const Text(
@@ -91,13 +97,20 @@ class GraphScreen extends ConsumerWidget {
                         ),
                         Container(
                           decoration: BoxDecoration(
-                            color: Theme.of(context).primaryColor.withAlpha(20),
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                ? Theme.of(
+                                    context,
+                                  ).colorScheme.primary.withValues(alpha: 0.3)
+                                : Theme.of(
+                                    context,
+                                  ).primaryColor.withValues(alpha: 0.1),
                             shape: BoxShape.circle,
                           ),
                           child: IconButton(
                             icon: Icon(
                               Icons.add,
-                              color: Theme.of(context).primaryColor,
+                              color: Theme.of(context).colorScheme.primary,
                             ),
                             onPressed: () {
                               showModalBottomSheet(
@@ -122,15 +135,13 @@ class GraphScreen extends ConsumerWidget {
                     child: Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Theme.of(context).cardTheme.color,
                         borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.03),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
+                        border: Border.all(
+                          color: Theme.of(
+                            context,
+                          ).dividerColor.withOpacity(0.05),
+                        ),
                       ),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
@@ -190,9 +201,8 @@ class GraphScreen extends ConsumerWidget {
                                         Expanded(
                                           child: Text(
                                             _getTypeName(e.key),
-                                            style: TextStyle(
+                                            style: const TextStyle(
                                               fontSize: 12,
-                                              color: Colors.grey[700],
                                               fontWeight: FontWeight.w500,
                                             ),
                                             overflow: TextOverflow.ellipsis,

@@ -3,11 +3,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../dashboard/dashboard_view_model.dart';
 
-class DividendsScreen extends ConsumerWidget {
+class DividendsScreen extends ConsumerStatefulWidget {
   const DividendsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DividendsScreen> createState() => _DividendsScreenState();
+}
+
+class _DividendsScreenState extends ConsumerState<DividendsScreen> {
+  Key _animationKey = UniqueKey();
+
+  void _triggerRefreshAnimation() {
+    setState(() {
+      _animationKey = UniqueKey();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final dashboardAsync = ref.watch(dashboardViewModelProvider);
     final currencyFormatter = NumberFormat.currency(
       symbol: '₩',
@@ -27,71 +40,84 @@ class DividendsScreen extends ConsumerWidget {
               (sum, val) => sum + val,
             );
 
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        '배당 현황',
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: -1,
+            return KeyedSubtree(
+              key: _animationKey,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          '배당 현황',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -1,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.refresh),
+                          onPressed: () {
+                            _triggerRefreshAnimation();
+                            ref
+                                .read(dashboardViewModelProvider.notifier)
+                                .updateAllDividends();
+                          },
+                          tooltip: '배당 정보 업데이트',
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    if (annualTotal == 0) ...[
+                      const SizedBox(height: 60),
+                      const Icon(
+                        Icons.info_outline,
+                        size: 64,
+                        color: Colors.grey,
+                      ),
+                      const SizedBox(height: 16),
+                      const Center(child: Text('배당 정보가 없거나 자산이 없습니다.')),
+                      const SizedBox(height: 8),
+                      Center(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            _triggerRefreshAnimation();
+                            ref
+                                .read(dashboardViewModelProvider.notifier)
+                                .updateAllDividends();
+                          },
+                          child: const Text('배당 정보 불러오기'),
                         ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.refresh),
-                        onPressed: () => ref
-                            .read(dashboardViewModelProvider.notifier)
-                            .updateAllDividends(),
-                        tooltip: '배당 정보 업데이트',
+                    ] else ...[
+                      _buildSummaryCard(annualTotal, currencyFormatter),
+                      const SizedBox(height: 32),
+                      const Text(
+                        '월별 배당금 추정치',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      _buildMonthlyList(
+                        context,
+                        monthlyDividends,
+                        currencyFormatter,
+                      ),
+                      const SizedBox(height: 32),
+                      _buildAssetDividendList(
+                        state.assets,
+                        state.exchangeRate,
+                        currencyFormatter,
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 24),
-                  if (annualTotal == 0) ...[
-                    const SizedBox(height: 60),
-                    const Icon(
-                      Icons.info_outline,
-                      size: 64,
-                      color: Colors.grey,
-                    ),
-                    const SizedBox(height: 16),
-                    const Center(child: Text('배당 정보가 없거나 자산이 없습니다.')),
-                    const SizedBox(height: 8),
-                    Center(
-                      child: ElevatedButton(
-                        onPressed: () => ref
-                            .read(dashboardViewModelProvider.notifier)
-                            .updateAllDividends(),
-                        child: const Text('배당 정보 불러오기'),
-                      ),
-                    ),
-                  ] else ...[
-                    _buildSummaryCard(annualTotal, currencyFormatter),
-                    const SizedBox(height: 32),
-                    const Text(
-                      '월별 배당금 추정치',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildMonthlyList(monthlyDividends, currencyFormatter),
-                    const SizedBox(height: 32),
-                    _buildAssetDividendList(
-                      state.assets,
-                      state.exchangeRate,
-                      currencyFormatter,
-                    ),
                   ],
-                ],
+                ),
               ),
             );
           },
@@ -119,18 +145,32 @@ class DividendsScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 8),
-            Text(
-              formatter.format(annualTotal),
-              style: const TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.w900,
-                color: Colors.indigo,
-              ),
+            TweenAnimationBuilder<double>(
+              tween: Tween<double>(begin: 0, end: annualTotal),
+              duration: const Duration(milliseconds: 1000),
+              curve: Curves.easeOutQuint,
+              builder: (context, value, child) {
+                return Text(
+                  formatter.format(value),
+                  style: const TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.indigo,
+                  ),
+                );
+              },
             ),
             const SizedBox(height: 4),
-            Text(
-              '월 평균: ${formatter.format(annualTotal / 12)}',
-              style: const TextStyle(fontSize: 14, color: Colors.grey),
+            TweenAnimationBuilder<double>(
+              tween: Tween<double>(begin: 0, end: annualTotal / 12),
+              duration: const Duration(milliseconds: 1200),
+              curve: Curves.easeOutQuint,
+              builder: (context, value, child) {
+                return Text(
+                  '월 평균: ${formatter.format(value)}',
+                  style: const TextStyle(fontSize: 14, color: Colors.grey),
+                );
+              },
             ),
           ],
         ),
@@ -138,7 +178,11 @@ class DividendsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildMonthlyList(Map<int, double> data, NumberFormat formatter) {
+  Widget _buildMonthlyList(
+    BuildContext context,
+    Map<int, double> data,
+    NumberFormat formatter,
+  ) {
     return Column(
       children: List.generate(12, (index) {
         final month = index + 1;
@@ -149,10 +193,14 @@ class DividendsScreen extends ConsumerWidget {
           margin: const EdgeInsets.only(bottom: 8),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            color: isCurrentMonth ? Colors.indigo.withAlpha(10) : Colors.white,
+            color: isCurrentMonth
+                ? Colors.indigo.withAlpha(10)
+                : Theme.of(context).cardTheme.color,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: isCurrentMonth ? Colors.indigo : Colors.grey.shade200,
+              color: isCurrentMonth
+                  ? Colors.indigo
+                  : Theme.of(context).dividerColor.withOpacity(0.05),
             ),
           ),
           child: Row(
@@ -180,14 +228,21 @@ class DividendsScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(width: 16),
-              Text(
-                formatter.format(amount),
-                style: TextStyle(
-                  fontWeight: isCurrentMonth
-                      ? FontWeight.bold
-                      : FontWeight.normal,
-                  color: amount > 0 ? Colors.black87 : Colors.grey,
-                ),
+              TweenAnimationBuilder<double>(
+                tween: Tween<double>(begin: 0, end: amount),
+                duration: const Duration(milliseconds: 1000),
+                curve: Curves.easeOutQuint,
+                builder: (context, value, child) {
+                  return Text(
+                    formatter.format(value),
+                    style: TextStyle(
+                      fontWeight: isCurrentMonth
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                      color: amount > 0 ? null : Colors.grey,
+                    ),
+                  );
+                },
               ),
             ],
           ),
@@ -223,9 +278,16 @@ class DividendsScreen extends ConsumerWidget {
             leading: const Icon(Icons.monetization_on, color: Colors.amber),
             title: Text(a.asset.name),
             subtitle: Text('${a.dividendMonths?.join(', ') ?? '정보 없음'}월 지급'),
-            trailing: Text(
-              formatter.format(annualValue),
-              style: const TextStyle(fontWeight: FontWeight.bold),
+            trailing: TweenAnimationBuilder<double>(
+              tween: Tween<double>(begin: 0, end: annualValue),
+              duration: const Duration(milliseconds: 1000),
+              curve: Curves.easeOutQuint,
+              builder: (context, value, child) {
+                return Text(
+                  formatter.format(value),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                );
+              },
             ),
           );
         }),
