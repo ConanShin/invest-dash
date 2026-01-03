@@ -8,7 +8,7 @@
 PRODUCT_NAME = invest_dash
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.investdash.investDash
+PRODUCT_BUNDLE_IDENTIFIER = com.conan.invest_dash
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2026 com.investdash. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2026 com.conan. All rights reserved.
