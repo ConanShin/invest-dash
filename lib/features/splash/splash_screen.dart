@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -34,12 +36,26 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     _controller.forward();
 
-    // Navigate to main screen after animations and a short delay
-    Future.delayed(const Duration(milliseconds: 2500), () {
-      if (mounted) {
-        Navigator.of(context).pushReplacementNamed('/');
+    _requestPermissionAndNavigate();
+  }
+
+  Future<void> _requestPermissionAndNavigate() async {
+    // Proactively request location permission
+    try {
+      await setLocaleIdentifier('ko_KR');
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        await Geolocator.requestPermission();
       }
-    });
+    } catch (e) {
+      print('Error requesting permission on splash: $e');
+    }
+
+    // Still navigate after the delay regardless of permission result
+    await Future.delayed(const Duration(milliseconds: 2000));
+    if (mounted) {
+      Navigator.of(context).pushReplacementNamed('/');
+    }
   }
 
   @override

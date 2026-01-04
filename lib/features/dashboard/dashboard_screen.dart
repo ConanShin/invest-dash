@@ -5,6 +5,7 @@ import 'widgets/compact_asset_list.dart';
 import 'widgets/summary_card.dart';
 import 'widgets/weather_widget.dart';
 import 'widgets/price_change_list.dart';
+import '../../core/providers/data_providers.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -26,8 +27,10 @@ class DashboardScreen extends ConsumerWidget {
                     padding: const EdgeInsets.all(16.0),
                     child: SummaryCard(totalValue: totalValue),
                   ),
-                  const WeatherWidget(),
-                  const SizedBox(height: 8),
+                  if (ref.watch(weatherSettingProvider)) ...[
+                    const WeatherWidget(),
+                    const SizedBox(height: 8),
+                  ],
                   CompactAssetList(
                     assets: dashboardState.assets,
                     exchangeRate: dashboardState.exchangeRate,

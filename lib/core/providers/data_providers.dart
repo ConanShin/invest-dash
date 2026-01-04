@@ -45,3 +45,20 @@ class ThemeModeController extends _$ThemeModeController {
     await prefs.setInt(_themeKey, mode.index);
   }
 }
+
+@riverpod
+class WeatherSetting extends _$WeatherSetting {
+  static const _weatherKey = 'show_weather';
+
+  @override
+  bool build() {
+    final prefs = ref.watch(sharedPreferencesProvider);
+    return prefs.getBool(_weatherKey) ?? true;
+  }
+
+  Future<void> toggle(bool value) async {
+    state = value;
+    final prefs = ref.read(sharedPreferencesProvider);
+    await prefs.setBool(_weatherKey, value);
+  }
+}

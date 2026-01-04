@@ -32,12 +32,11 @@ class WeatherService {
 
   WeatherService(this._dio);
 
-  Future<WeatherData?> getWeatherData() async {
+  Future<WeatherData?> getWeatherData({
+    required double lat,
+    required double lon,
+  }) async {
     try {
-      // Seoul coordinates as default
-      const lat = 37.5665;
-      const lon = 126.9780;
-
       final weatherUrl =
           'https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon&current=temperature_2m,precipitation,weather_code&daily=temperature_2m_max,temperature_2m_min&timezone=Asia%2FSeoul';
 
@@ -47,8 +46,7 @@ class WeatherService {
         final current = data['current'];
         final daily = data['daily'];
 
-        // Mocking fine dust data for now as Open-Meteo doesn't provide it in the free forecast API without extra steps
-        // In a real app, another API would be used for PM10
+        // Mocking fine dust data
         final pm10 = 35;
 
         return WeatherData(

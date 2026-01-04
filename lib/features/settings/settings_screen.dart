@@ -85,6 +85,23 @@ class SettingsScreen extends ConsumerWidget {
                 },
               ),
             ),
+            Consumer(
+              builder: (context, ref, _) {
+                final showWeather = ref.watch(weatherSettingProvider);
+                return ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.cloud_outlined),
+                  title: const Text('홈 화면 날씨'),
+                  subtitle: const Text('홈 화면에서 오늘의 날씨를 보여줍니다.'),
+                  trailing: Switch(
+                    value: showWeather,
+                    onChanged: (value) {
+                      ref.read(weatherSettingProvider.notifier).toggle(value);
+                    },
+                  ),
+                );
+              },
+            ),
             const Divider(height: 48),
             _buildSectionHeader('데이터 관리'),
             ListTile(
@@ -106,7 +123,7 @@ class SettingsScreen extends ConsumerWidget {
             const ListTile(
               contentPadding: EdgeInsets.zero,
               title: Text('버전'),
-              trailing: Text('1.0.0'),
+              trailing: Text('1.0.4'),
             ),
           ],
         ),

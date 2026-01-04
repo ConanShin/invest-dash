@@ -230,3 +230,55 @@ abstract class _$ThemeModeController extends $Notifier<ThemeMode> {
     element.handleCreate(ref, build);
   }
 }
+
+@ProviderFor(WeatherSetting)
+final weatherSettingProvider = WeatherSettingProvider._();
+
+final class WeatherSettingProvider
+    extends $NotifierProvider<WeatherSetting, bool> {
+  WeatherSettingProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'weatherSettingProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$weatherSettingHash();
+
+  @$internal
+  @override
+  WeatherSetting create() => WeatherSetting();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
+  }
+}
+
+String _$weatherSettingHash() => r'e845f85f60c8153be946994f8287ae1bdb4f4225';
+
+abstract class _$WeatherSetting extends $Notifier<bool> {
+  bool build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<bool, bool>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<bool, bool>,
+              bool,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}

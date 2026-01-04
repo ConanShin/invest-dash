@@ -1,121 +1,242 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/weather_service.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 
-class WeatherWidget extends ConsumerWidget {
+class WeatherWidget extends ConsumerStatefulWidget {
   const WeatherWidget({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return FutureBuilder<WeatherData?>(
-      future: ref.read(weatherServiceProvider).getWeatherData(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: Padding(
-              padding: EdgeInsets.all(20.0),
-              child: CircularProgressIndicator(),
-            ),
-          );
+  ConsumerState<WeatherWidget> createState() => _WeatherWidgetState();
+}
+
+class _WeatherWidgetState extends ConsumerState<WeatherWidget> {
+  WeatherData? _weatherData;
+  String _locationName = '위치 확인 중...';
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchWeather();
+  }
+
+  Future<void> _fetchWeather() async {
+    try {
+      // Check if location services are enabled
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        setState(() {
+          _error = '위치 서비스가 비활성화되어 있습니다.';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // Check permissions
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          setState(() {
+            _error = '위치 권한이 거부되었습니다.';
+            _isLoading = false;
+          });
+          return;
         }
+      }
 
-        final data = snapshot.data;
-        if (data == null) return const SizedBox.shrink();
+      if (permission == LocationPermission.deniedForever) {
+        setState(() {
+          _error = '위치 권한이 영구적으로 거부되었습니다. 설정에서 허용해주세요.';
+          _isLoading = false;
+        });
+        return;
+      }
 
-        return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Theme.of(context).brightness == Brightness.dark
-                ? const Color(0xFF161B22)
-                : Colors.blue[50]?.withOpacity(0.5),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.white.withValues(alpha: 0.05)
-                  : Colors.blue[100]!,
-              width: 1,
+      // Get position
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 10),
+        ),
+      );
+
+      // Get weather
+      final weatherService = ref.read(weatherServiceProvider);
+      final weatherData = await weatherService.getWeatherData(
+        lat: position.latitude,
+        lon: position.longitude,
+      );
+
+      // Get address
+      String locationName = '알 수 없는 지역';
+      try {
+        List<Placemark> placemarks = await placemarkFromCoordinates(
+          position.latitude,
+          position.longitude,
+        );
+        if (placemarks.isNotEmpty) {
+          final p = placemarks.first;
+          // Priority: SubLocality -> Locality -> AdministrativeArea
+          locationName =
+              p.subLocality ?? p.locality ?? p.administrativeArea ?? '대한민국';
+        }
+      } catch (e) {
+        print('Error geocoding: $e');
+      }
+
+      if (mounted) {
+        setState(() {
+          _weatherData = weatherData;
+          _locationName = locationName;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = '날씨 정보를 가져오는 중 오류가 발생했습니다.';
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        height: 120,
+        alignment: Alignment.center,
+        child: const CircularProgressIndicator(),
+      );
+    }
+
+    if (_error != null) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.red.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.red.withValues(alpha: 0.1)),
+        ),
+        child: Column(
+          children: [
+            Text(
+              _error!,
+              style: const TextStyle(color: Colors.redAccent, fontSize: 13),
+              textAlign: TextAlign.center,
             ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            const SizedBox(height: 8),
+            TextButton.icon(
+              onPressed: _fetchWeather,
+              icon: const Icon(Icons.refresh, size: 16, color: Colors.blue),
+              label: const Text('다시 시도', style: TextStyle(color: Colors.blue)),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final data = _weatherData;
+    if (data == null) return const SizedBox.shrink();
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isDark
+            ? const Color(0xFF161B22)
+            : Colors.blue[50]?.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.05)
+              : Colors.blue[100]!,
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '오늘의 날씨',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.blueAccent[100]
-                              : Colors.blueAccent,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '서울, 대한민국',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.grey[400]
-                              : Colors.grey[600],
-                        ),
-                      ),
-                    ],
+                  Text(
+                    '오늘의 날씨',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: isDark
+                          ? Colors.blueAccent[100]
+                          : Colors.blueAccent,
+                    ),
                   ),
-                  Row(
-                    children: [
-                      Icon(
-                        _getIconForCondition(data.condition),
-                        color: Colors.blue,
-                        size: 30,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '${data.temperature.toInt()}°',
-                        style: const TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ],
+                  const SizedBox(height: 4),
+                  Text(
+                    _locationName,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _buildWeatherItem(
-                    context,
-                    label: '최고/최저',
-                    value:
-                        '${data.tempMax.toInt()}° / ${data.tempMin.toInt()}°',
-                    icon: Icons.thermostat,
+                  Icon(
+                    _getIconForCondition(data.condition),
+                    color: Colors.blue,
+                    size: 30,
                   ),
-                  _buildWeatherItem(
-                    context,
-                    label: '강수량',
-                    value: '${data.precipitation.toStringAsFixed(1)}mm',
-                    icon: Icons.water_drop,
-                  ),
-                  _buildWeatherItem(
-                    context,
-                    label: '미세먼지',
-                    value: _getDustLevel(data.pm10),
-                    icon: Icons.air,
+                  const SizedBox(width: 8),
+                  Text(
+                    '${data.temperature.toInt()}°',
+                    style: const TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                 ],
               ),
             ],
           ),
-        );
-      },
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildWeatherItem(
+                context,
+                label: '최고/최저',
+                value: '${data.tempMax.toInt()}° / ${data.tempMin.toInt()}°',
+                icon: Icons.thermostat,
+              ),
+              _buildWeatherItem(
+                context,
+                label: '강수량',
+                value: '${data.precipitation.toStringAsFixed(1)}mm',
+                icon: Icons.water_drop,
+              ),
+              _buildWeatherItem(
+                context,
+                label: '미세먼지',
+                value: _getDustLevel(data.pm10),
+                icon: Icons.air,
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
