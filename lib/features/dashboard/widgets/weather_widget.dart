@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/weather_service.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+import '../dashboard_view_model.dart';
 
 class WeatherWidget extends ConsumerStatefulWidget {
   const WeatherWidget({super.key});
@@ -15,23 +17,43 @@ class _WeatherWidgetState extends ConsumerState<WeatherWidget> {
   WeatherData? _weatherData;
   String _locationName = '위치 확인 중...';
   bool _isLoading = true;
+  bool _isRefreshing = false;
   String? _error;
+  Timer? _timer;
 
   @override
   void initState() {
     super.initState();
     _fetchWeather();
+    _timer = Timer.periodic(const Duration(minutes: 10), (timer) {
+      _fetchWeather();
+    });
   }
 
-  Future<void> _fetchWeather() async {
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _fetchWeather({bool isManualRefresh = false}) async {
     try {
+      if (!_isLoading && mounted) {
+        setState(() {
+          _isRefreshing = true;
+        });
+      }
+
       // Check if location services are enabled
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        setState(() {
-          _error = '위치 서비스가 비활성화되어 있습니다.';
-          _isLoading = false;
-        });
+        if (mounted) {
+          setState(() {
+            _error = '위치 서비스가 비활성화되어 있습니다.';
+            _isLoading = false;
+            _isRefreshing = false;
+          });
+        }
         return;
       }
 
@@ -40,19 +62,25 @@ class _WeatherWidgetState extends ConsumerState<WeatherWidget> {
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
-          setState(() {
-            _error = '위치 권한이 거부되었습니다.';
-            _isLoading = false;
-          });
+          if (mounted) {
+            setState(() {
+              _error = '위치 권한이 거부되었습니다.';
+              _isLoading = false;
+              _isRefreshing = false;
+            });
+          }
           return;
         }
       }
 
       if (permission == LocationPermission.deniedForever) {
-        setState(() {
-          _error = '위치 권한이 영구적으로 거부되었습니다. 설정에서 허용해주세요.';
-          _isLoading = false;
-        });
+        if (mounted) {
+          setState(() {
+            _error = '위치 권한이 영구적으로 거부되었습니다. 설정에서 허용해주세요.';
+            _isLoading = false;
+            _isRefreshing = false;
+          });
+        }
         return;
       }
 
@@ -93,20 +121,49 @@ class _WeatherWidgetState extends ConsumerState<WeatherWidget> {
           _weatherData = weatherData;
           _locationName = locationName;
           _isLoading = false;
+          _isRefreshing = false;
+          _error = null;
         });
+
+        if (isManualRefresh &&
+            weatherData != null &&
+            _shouldShowPrecipitationAlert(weatherData.dailyWeatherCode)) {
+          _showPrecipitationDialog(weatherData.dailyWeatherCode);
+        }
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           _error = '날씨 정보를 가져오는 중 오류가 발생했습니다.';
           _isLoading = false;
+          _isRefreshing = false;
         });
       }
     }
   }
 
+  void _showPrecipitationDialog(int code) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('날씨 알림'),
+        content: Text(_getPrecipitationMessage(code)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('확인'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    ref.listen(weatherRefreshTriggerProvider, (previous, next) {
+      _fetchWeather(isManualRefresh: true);
+    });
+
     if (_isLoading) {
       return Container(
         margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -134,7 +191,7 @@ class _WeatherWidgetState extends ConsumerState<WeatherWidget> {
             ),
             const SizedBox(height: 8),
             TextButton.icon(
-              onPressed: _fetchWeather,
+              onPressed: () => _fetchWeather(isManualRefresh: true),
               icon: const Icon(Icons.refresh, size: 16, color: Colors.blue),
               label: const Text('다시 시도', style: TextStyle(color: Colors.blue)),
             ),
@@ -163,78 +220,110 @@ class _WeatherWidgetState extends ConsumerState<WeatherWidget> {
           width: 1,
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '오늘의 날씨',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: isDark
-                          ? Colors.blueAccent[100]
-                          : Colors.blueAccent,
+          AnimatedOpacity(
+            opacity: _isRefreshing ? 0.3 : 1.0,
+            duration: const Duration(milliseconds: 300),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '오늘의 날씨',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: isDark
+                                ? Colors.blueAccent[100]
+                                : Colors.blueAccent,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _locationName,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDark ? Colors.grey[400] : Colors.grey[600],
+                          ),
+                        ),
+                        if (_shouldShowPrecipitationAlert(
+                          data.dailyWeatherCode,
+                        )) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            _getPrecipitationMessage(data.dailyWeatherCode),
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Colors.redAccent,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _locationName,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    Row(
+                      children: [
+                        Icon(
+                          _getIconForCondition(data.condition),
+                          color: Colors.blue,
+                          size: 30,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${data.temperature.toInt()}°',
+                          style: const TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
-              Row(
-                children: [
-                  Icon(
-                    _getIconForCondition(data.condition),
-                    color: Colors.blue,
-                    size: 30,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    '${data.temperature.toInt()}°',
-                    style: const TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w900,
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildWeatherItem(
+                      context,
+                      label: '최고/최저',
+                      value:
+                          '${data.tempMax.toInt()}° / ${data.tempMin.toInt()}°',
+                      icon: Icons.thermostat,
                     ),
-                  ),
-                ],
-              ),
-            ],
+                    _buildWeatherItem(
+                      context,
+                      label: '강수량',
+                      value: '${data.precipitation.toStringAsFixed(1)}mm',
+                      icon: Icons.water_drop,
+                    ),
+                    _buildWeatherItem(
+                      context,
+                      label: '미세먼지',
+                      value: _getDustLevel(data.pm10),
+                      icon: Icons.air,
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildWeatherItem(
-                context,
-                label: '최고/최저',
-                value: '${data.tempMax.toInt()}° / ${data.tempMin.toInt()}°',
-                icon: Icons.thermostat,
+          if (_isRefreshing)
+            const Positioned(
+              top: 0,
+              right: 0,
+              child: SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
               ),
-              _buildWeatherItem(
-                context,
-                label: '강수량',
-                value: '${data.precipitation.toStringAsFixed(1)}mm',
-                icon: Icons.water_drop,
-              ),
-              _buildWeatherItem(
-                context,
-                label: '미세먼지',
-                value: _getDustLevel(data.pm10),
-                icon: Icons.air,
-              ),
-            ],
-          ),
+            ),
         ],
       ),
     );
@@ -280,5 +369,26 @@ class _WeatherWidgetState extends ConsumerState<WeatherWidget> {
     if (pm10 <= 80) return '보통';
     if (pm10 <= 150) return '나쁨';
     return '매우나쁨';
+  }
+
+  bool _shouldShowPrecipitationAlert(int code) {
+    // 0~48: Clear, Cloudy, Fog (No precipitation)
+    // >= 51: Drizzle, Rain, Snow, Showers, Thunderstorm
+    return code >= 51;
+  }
+
+  String _getPrecipitationMessage(int code) {
+    // Snow codes: 71, 73, 75, 77, 85, 86
+    final snowCodes = [71, 73, 75, 77, 85, 86];
+    if (snowCodes.contains(code)) {
+      return '오늘 눈 소식이 있어요 ❄️';
+    }
+    // Thunderstorm codes: 95, 96, 99
+    final stormCodes = [95, 96, 99];
+    if (stormCodes.contains(code)) {
+      return '천둥번개를 동반한 비 예보 ⛈️';
+    }
+
+    return '오늘 비 소식이 있어요 ☔️';
   }
 }

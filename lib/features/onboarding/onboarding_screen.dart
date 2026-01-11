@@ -94,101 +94,42 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   Widget _buildWelcomePage() {
-    return Padding(
-      padding: const EdgeInsets.all(40.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.auto_graph, size: 100, color: Colors.blue),
-          const SizedBox(height: 40),
-          const Text(
-            '인베스트 대시에\n오신 것을 환영합니다!',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.w900,
-              height: 1.2,
-            ),
-          ),
-          const SizedBox(height: 20),
-          const Text(
-            '당신의 스마트한 자산 관리 파트너,\n지금 바로 시작해 보세요.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 16, color: Colors.grey),
-          ),
-          const SizedBox(height: 60),
-          SizedBox(
-            width: double.infinity,
-            height: 56,
-            child: ElevatedButton(
-              onPressed: _nextPage,
-              style: ElevatedButton.styleFrom(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-              child: const Text(
-                '시작하기',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildOwnerRegistrationPage() {
-    return Padding(
-      padding: const EdgeInsets.all(40.0),
-      child: Form(
-        key: _formKey,
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(40.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const Icon(Icons.auto_graph, size: 100, color: Colors.blue),
+            const SizedBox(height: 40),
             const Text(
-              '관리자 이름을\n설정해주세요',
+              '인베스트 대시에\n오신 것을 환영합니다!',
+              textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.w900,
                 height: 1.2,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 20),
             const Text(
-              '자산을 관리할 주체의 이름을 입력하세요.\n(예: 본인 이름, 가족 구성원 등)',
-              style: TextStyle(fontSize: 14, color: Colors.grey),
+              '당신의 스마트한 자산 관리 파트너,\n지금 바로 시작해 보세요.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 16, color: Colors.grey),
             ),
-            const SizedBox(height: 48),
-            TextFormField(
-              controller: _ownerController,
-              decoration: InputDecoration(
-                labelText: '소유자 이름',
-                hintText: '이름을 입력하세요',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                prefixIcon: const Icon(Icons.person_outline),
-              ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) return '이름을 입력해주세요.';
-                return null;
-              },
-            ),
-            const SizedBox(height: 48),
+            const SizedBox(height: 60),
             SizedBox(
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
-                onPressed: _registerOwner,
+                onPressed: _nextPage,
                 style: ElevatedButton.styleFrom(
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
                 ),
                 child: const Text(
-                  '다음으로',
+                  '시작하기',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ),
@@ -199,61 +140,127 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
   }
 
-  Widget _buildAssetRegistrationPage() {
-    return Padding(
-      padding: const EdgeInsets.all(40.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(
-            Icons.account_balance_wallet_outlined,
-            size: 100,
-            color: Colors.blue,
-          ),
-          const SizedBox(height: 40),
-          const Text(
-            '이제 첫 번째 자산을\n등록해볼까요?',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.w900,
-              height: 1.2,
-            ),
-          ),
-          const SizedBox(height: 20),
-          const Text(
-            '주식, ETF, 예금 등 보유하신 자산을\n추가하여 포트폴리오를 완성하세요.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 16, color: Colors.grey),
-          ),
-          const SizedBox(height: 60),
-          SizedBox(
-            width: double.infinity,
-            height: 56,
-            child: ElevatedButton(
-              onPressed: () async {
-                await Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const AddAssetScreen()),
-                );
-                // After returning from AddAssetScreen, trigger refresh to go to MainScreen
-                ref.invalidate(ownersProvider);
-              },
-              style: ElevatedButton.styleFrom(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+  Widget _buildOwnerRegistrationPage() {
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(40.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '관리자 이름을\n설정해주세요',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                  height: 1.2,
                 ),
               ),
-              child: const Text(
-                '첫 자산 등록하기',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              const SizedBox(height: 12),
+              const Text(
+                '자산을 관리할 주체의 이름을 입력하세요.\n(예: 본인 이름, 가족 구성원 등)',
+                style: TextStyle(fontSize: 14, color: Colors.grey),
+              ),
+              const SizedBox(height: 48),
+              TextFormField(
+                controller: _ownerController,
+                decoration: InputDecoration(
+                  labelText: '소유자 이름',
+                  hintText: '이름을 입력하세요',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  prefixIcon: const Icon(Icons.person_outline),
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty)
+                    return '이름을 입력해주세요.';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 48),
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton(
+                  onPressed: _registerOwner,
+                  style: ElevatedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  child: const Text(
+                    '다음으로',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAssetRegistrationPage() {
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(40.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.account_balance_wallet_outlined,
+              size: 100,
+              color: Colors.blue,
+            ),
+            const SizedBox(height: 40),
+            const Text(
+              '이제 첫 번째 자산을\n등록해볼까요?',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.w900,
+                height: 1.2,
               ),
             ),
-          ),
-          TextButton(
-            onPressed: () => ref.invalidate(ownersProvider),
-            child: const Text('나중에 하기', style: TextStyle(color: Colors.grey)),
-          ),
-        ],
+            const SizedBox(height: 20),
+            const Text(
+              '주식, ETF, 예금 등 보유하신 자산을\n추가하여 포트폴리오를 완성하세요.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 16, color: Colors.grey),
+            ),
+            const SizedBox(height: 60),
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton(
+                onPressed: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const AddAssetScreen()),
+                  );
+                  // After returning from AddAssetScreen, trigger refresh to go to MainScreen
+                  ref.invalidate(ownersProvider);
+                },
+                style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: const Text(
+                  '첫 자산 등록하기',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () => ref.invalidate(ownersProvider),
+              child: const Text('나중에 하기', style: TextStyle(color: Colors.grey)),
+            ),
+          ],
+        ),
       ),
     );
   }

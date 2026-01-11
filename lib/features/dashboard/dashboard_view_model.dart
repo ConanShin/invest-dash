@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../core/services/fund_search_service.dart';
@@ -6,6 +7,15 @@ import '../../../core/services/stock_service.dart';
 import '../../../data/local/database.dart';
 
 part 'dashboard_view_model.g.dart';
+
+class WeatherRefreshNotifier extends Notifier<int> {
+  @override
+  int build() => 0;
+  void trigger() => state++;
+}
+
+final weatherRefreshTriggerProvider =
+    NotifierProvider<WeatherRefreshNotifier, int>(WeatherRefreshNotifier.new);
 
 class DashboardAsset {
   final Asset asset;
@@ -135,6 +145,7 @@ class DashboardViewModel extends _$DashboardViewModel {
 
   Future<void> refresh() async {
     print('DEBUG: Manual Refresh Started');
+    ref.read(weatherRefreshTriggerProvider.notifier).trigger();
     ref.invalidateSelf();
     await future;
     await _fetchCurrentPrices();

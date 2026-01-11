@@ -11,6 +11,7 @@ class WeatherData {
   final double precipitation;
   final int pm10;
   final String condition;
+  final int dailyWeatherCode;
 
   WeatherData({
     required this.temperature,
@@ -19,6 +20,7 @@ class WeatherData {
     required this.precipitation,
     required this.pm10,
     required this.condition,
+    required this.dailyWeatherCode,
   });
 }
 
@@ -38,7 +40,7 @@ class WeatherService {
   }) async {
     try {
       final weatherUrl =
-          'https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon&current=temperature_2m,precipitation,weather_code&daily=temperature_2m_max,temperature_2m_min&timezone=Asia%2FSeoul';
+          'https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon&current=temperature_2m,precipitation,weather_code&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=Asia%2FSeoul';
 
       final response = await _dio.get(weatherUrl);
       if (response.statusCode == 200) {
@@ -56,6 +58,7 @@ class WeatherService {
           precipitation: current['precipitation'].toDouble(),
           pm10: pm10,
           condition: _getConditionFromCode(current['weather_code']),
+          dailyWeatherCode: daily['weather_code'][0],
         );
       }
     } catch (e) {
