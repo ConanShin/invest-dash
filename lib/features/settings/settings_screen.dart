@@ -9,6 +9,7 @@ import 'package:file_picker/file_picker.dart';
 import '../../core/providers/data_providers.dart';
 import '../../features/dashboard/dashboard_view_model.dart';
 import 'owner_management_screen.dart';
+import '../../core/providers/ad_provider.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -117,6 +118,34 @@ class SettingsScreen extends ConsumerWidget {
               title: const Text('데이터 가져오기 (Import)'),
               subtitle: const Text('기존에 내보낸 JSON 파일에서 데이터를 복원합니다.'),
               onTap: () => _importData(context, ref),
+            ),
+
+            const Divider(height: 48),
+            _buildSectionHeader('프리미엄'),
+            Consumer(
+              builder: (context, ref, child) {
+                final isAdRemoved =
+                    ref.watch(adRemovalStateProvider).asData?.value ?? false;
+                return ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(
+                    isAdRemoved
+                        ? Icons.workspace_premium
+                        : Icons.workspace_premium_outlined,
+                    color: isAdRemoved ? Colors.amber : null,
+                  ),
+                  title: Text(isAdRemoved ? '광고 제거됨' : '광고 제거하기'),
+                  subtitle: Text(
+                    isAdRemoved ? '프리미엄 기능을 이용 중입니다.' : '9,900원으로 광고 없이 이용하세요.',
+                  ),
+                  trailing: isAdRemoved
+                      ? const Icon(Icons.check_circle, color: Colors.green)
+                      : const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: isAdRemoved
+                      ? null
+                      : () => _showPurchaseDialog(context, ref),
+                );
+              },
             ),
             const Divider(height: 48),
             _buildSectionHeader('앱 정보'),
@@ -265,5 +294,52 @@ class SettingsScreen extends ConsumerWidget {
         ).showSnackBar(SnackBar(content: Text('가져오기 실패: $e')));
       }
     }
+  }
+
+  void _showPurchaseDialog(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('광고 제거'),
+        content: const Text(
+          '9,900원을 결제하고 광고를 제거하시겠습니까?\n(실제 결제는 되지 않는 테스트 기능입니다)',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context); // Close dialog
+
+              // Simulate payment processing
+              if (context.mounted) {
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) =>
+                      const Center(child: CircularProgressIndicator()),
+                );
+              }
+
+              await Future.delayed(const Duration(seconds: 1));
+
+              await ref
+                  .read(adRemovalStateProvider.notifier)
+                  .purchaseRemoveAds();
+
+              if (context.mounted) {
+                Navigator.pop(context); // Close loading
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('광고가 성공적으로 제거되었습니다.')),
+                );
+              }
+            },
+            child: const Text('결제하기'),
+          ),
+        ],
+      ),
+    );
   }
 }
